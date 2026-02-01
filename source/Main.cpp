@@ -1,68 +1,26 @@
-
 #include <iostream>
+#include <fmt/core.h>
 #include <SDL3/SDL.h>
 #include "glad/glad.h"
+#include "shader/Shader.h"
+#include <filesystem>
+#include <cmath>
 
-const char *vertexShaderSource = "#version 330 core\n"
-            "layout (location = 0) in vec3 aPos;\n"
-            "layout (location = 1) in vec3 aCol;\n"
-            "out vec4 Col;\n"
-            "void main()\n"
-            "{\n"
-            " gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
-            " Col = vec4(aCol, 1.0f);\n"
-            "}";
+const char *title = "OpenGL";
+int width = 800;
+int height = 600;
+SDL_Window *window;
+SDL_GLContext context;
 
-const char *fragmentShaderSource = "#version 330 core\n"
-        "out vec4 FragColor;\n"
-        "in vec4 Col;\n"
-        "void main()\n"
-        "{\n"
-        " FragColor = Col;\n"
-        "}";
-
-
-int CompileShader(const char *source, GLenum type);
-int LinkShader(int vertexShader, int fragmentShader);
+void InitWindow();
 
 int main(int argc, char **argv) {
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK) < 0) {
-        std::cerr << "Failed to initilize SDL: " << SDL_GetError() << std::endl;
-        exit(1);
-    }
+    namespace fs = std::filesystem;
+    fs::path current_path = fs::current_path();
+    std::string path = current_path.string();
+    std::cout << fmt::format("Current path: {}\n", path);
 
-    const char *title = "OpenGL";
-    int width = 800;
-    int height = 600;
-    SDL_Window *window = SDL_CreateWindow(
-        title,
-        width,
-        height,
-        SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
-
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
-
-    if (!window) {
-        std::cerr << "Failed to create window: " << SDL_GetError() << std::endl;
-        SDL_Quit();
-        exit(2);
-    }
-
-    SDL_GLContext context = SDL_GL_CreateContext(window);
-    if (context == NULL) {
-        std::cerr << "Failed to create opengl context: " << SDL_GetError() << std::endl;
-        SDL_Quit();
-        exit(3);
-    }
-
-    if (!gladLoadGLLoader((GLADloadproc) SDL_GL_GetProcAddress)) {
-        std::cerr << "Glad was not initilized.\n";
-        exit(4);
-    }
+    InitWindow();
 
     float vertices[] = {
         // x     y     z    r     g     b
@@ -75,11 +33,7 @@ int main(int argc, char **argv) {
         0, 1, 2,
     };
 
-    int vertexShader = CompileShader(vertexShaderSource, GL_VERTEX_SHADER);
-    int fragmentShader = CompileShader(fragmentShaderSource, GL_FRAGMENT_SHADER);
-    int shaderProgram = LinkShader(vertexShader, fragmentShader);
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
+    Shader triangleShader(ASSETS_DIR"shaders/triangle.vert", ASSETS_DIR"shaders/triangle.frag");
 
     uint32_t vao, vbo, ebo;
     glGenVertexArrays(1, &vao);
@@ -132,7 +86,11 @@ int main(int argc, char **argv) {
 
         glClearColor(0.20f, 0.70f, 0.92f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glUseProgram(shaderProgram);
+        triangleShader.use();
+        float offsetX = std::sin(frameStart / 2000.0f) / 2.0f;
+        triangleShader.setFloat("offsetX", offsetX);
+        float offsetY = std::cos(frameStart / 2000.0f) / 2.0f;
+        triangleShader.setFloat("offsetY", offsetY);
         glBindVertexArray(vao);
         glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);
@@ -148,41 +106,39 @@ int main(int argc, char **argv) {
     return 0;
 }
 
-int CompileShader(const char *source, GLenum type) {
-    int shader = glCreateShader(type);
-    glShaderSource(shader, 1, &source, NULL);
-    glCompileShader(shader);
-
-    int success;
-    char errorLog[512];
-    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-    if (!success) {
-        char shaderType[16];
-        if (type == GL_VERTEX_SHADER) {
-            snprintf(shaderType, 16, "VERTEX");
-        } else {
-            snprintf(shaderType, 16, "FRAGMENT");
-        }
-        glGetShaderInfoLog(shader, 512, NULL, errorLog);
-        return -1;
+void InitWindow() {
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK) < 0) {
+        std::cerr << fmt::format("Failed to initilize SDL: {}\n", SDL_GetError());
+        exit(1);
     }
 
-    return shader;
-}
+    window = SDL_CreateWindow(
+        title,
+        width,
+        height,
+        SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 
-int LinkShader(int vertexShader, int fragmentShader) {
-    int shaderProgram = glCreateProgram();
-    glAttachShader(shaderProgram, vertexShader);
-    glAttachShader(shaderProgram, fragmentShader);
-    glLinkProgram(shaderProgram);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
-    int success;
-    char errorLog[512];
-    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-    if (!success) {
-        glGetProgramInfoLog(shaderProgram, 512, NULL, errorLog);
-        printf("ERROR::SHADER::PROGRAM::LINKING_FAILED: %s\n", errorLog);
-        return -1;
+    if (!window) {
+        std::cerr << fmt::format("Failed to create window: {}\n", SDL_GetError());
+        SDL_Quit();
+        exit(2);
     }
-    return shaderProgram;
+
+    context = SDL_GL_CreateContext(window);
+    if (context == NULL) {
+        std::cerr << fmt::format("Failed to create opengl context: {}\n", SDL_GetError());
+        SDL_Quit();
+        exit(3);
+    }
+
+    if (!gladLoadGLLoader((GLADloadproc) SDL_GL_GetProcAddress)) {
+        std::cerr << "Glad was not initilized.\n";
+        exit(4);
+    }
 }

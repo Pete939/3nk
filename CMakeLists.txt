@@ -3,10 +3,17 @@ project(OpenGL)
 
 set(CMAKE_CXX_STANDARD 20)
 
+set(ASSETS_DIR "${CMAKE_SOURCE_DIR}/assets/")
+add_compile_definitions(
+        ASSETS_DIR="${ASSETS_DIR}"
+)
+
 find_package(fmt REQUIRED)
 
 add_executable(OpenGL source/Main.cpp
-        source/glad.c)
+        source/glad.c
+        source/shader/Shader.cpp
+        source/shader/Shader.h)
 
 target_include_directories(OpenGL
         PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/glad)
