@@ -13,10 +13,12 @@ find_package(fmt REQUIRED)
 add_executable(OpenGL source/Main.cpp
         source/glad.c
         source/shader/Shader.cpp
-        source/shader/Shader.h)
+        source/stb_image.c
+        source/texture/Texture.cpp)
 
 target_include_directories(OpenGL
-        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/glad)
+        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/glad
+        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/stb)
 
 
 find_package(SDL3 CONFIG REQUIRED)
