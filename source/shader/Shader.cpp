@@ -1,14 +1,15 @@
 #include "Shader.h"
-
+#include <glad/glad.h>
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include <fmt/core.h>
 
-#include "glad/glad.h"
+Shader::Shader() : id(-1) {
+    std::cout << "Creating unitilized shader.\n";
+}
 
-Shader::Shader(const char *vertexShaderPath, const char *fragmentShaderPath) {
-    id = -1;
+void Shader::createShaderProgram(const char *vertexShaderPath, const char *fragmentShaderPath) {
     std::ifstream vertexShaderFile;
     vertexShaderFile.open(vertexShaderPath);
     if (vertexShaderFile.fail()) {
@@ -33,6 +34,10 @@ Shader::Shader(const char *vertexShaderPath, const char *fragmentShaderPath) {
 
     glDeleteShader(vert);
     glDeleteShader(frag);
+}
+
+Shader::Shader(const char *vertexShaderPath, const char *fragmentShaderPath): id(-1) {
+    createShaderProgram(vertexShaderPath, fragmentShaderPath);
 }
 
 void Shader::setBool(const std::string &name, bool value) const {
