@@ -35,12 +35,14 @@ int main(int argc, char **argv) {
 
     InitWindow();
 
+    const float scale = 10.0f;
+
     float vertices[] = {
         // positions // colors // texture coords
-        0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, // top right
-        0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, // bottom right
-        -0.5f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, // bottom left
-        -0.5f, 0.5f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f // top left
+        0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f * scale, 1.0f * scale, // top right
+        0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f * scale, 0.0f * scale, // bottom right
+        -0.5f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f * scale, 0.0f * scale, // bottom left
+        -0.5f, 0.5f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f * scale, 1.0f * scale // top left
     };
 
     uint32_t indices[] = {
@@ -104,10 +106,10 @@ void Render() {
     glClearColor(0.20f, 0.70f, 0.92f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     shader.use();
-    float offsetX = std::sin(frameStart / 2000.0f) / 2.0f;
-    shader.setFloat("offsetX", offsetX);
-    float offsetY = std::cos(frameStart / 2000.0f) / 2.0f;
-    shader.setFloat("offsetY", offsetY);
+    // float offsetX = std::sin(frameStart / 2000.0f) / 2.0f;
+    // shader.setFloat("offsetX", offsetX);
+    // float offsetY = std::cos(frameStart / 2000.0f) / 2.0f;
+    // shader.setFloat("offsetY", offsetY);
     shader.setFloat("proportion", proportion);
     glBindVertexArray(vao);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
