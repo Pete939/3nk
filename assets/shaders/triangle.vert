@@ -5,14 +5,11 @@ layout (location = 2) in vec2 aTexCoords;
 
 uniform float offsetX;
 uniform float offsetY;
+uniform mat4 transform;
 
-//out vec4 Col;
 out vec2 TexCoords;
 void main()
 {
-    float x = aPos.x + offsetX;
-    float y = aPos.y + offsetY;
-    gl_Position = vec4(x, y, aPos.z, 1.0);
-//    Col = gl_Position;
+    gl_Position = transform * vec4(aPos, 1.0f);
     TexCoords = aTexCoords;
 }

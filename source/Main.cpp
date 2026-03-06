@@ -1,4 +1,3 @@
-#include <iostream>
 #include <fmt/core.h>
 #include <SDL3/SDL.h>
 #include "glad/glad.h"
@@ -31,11 +30,11 @@ int main(int argc, char **argv) {
     namespace fs = std::filesystem;
     fs::path current_path = fs::current_path();
     std::string path = current_path.string();
-    std::cout << fmt::format("Current path: {}\n", path);
+    fmt::print("Current path: {}\n", path);
 
     InitWindow();
 
-    const float scale = 10.0f;
+    const float scale = 1.0f;
 
     float vertices[] = {
         // positions // colors // texture coords
@@ -102,6 +101,23 @@ int main(int argc, char **argv) {
     return 0;
 }
 
+void UpdateFirst() {
+    auto transform = glm::mat4(1.0f);
+    transform = glm::translate(transform, glm::vec3(0.5, 0.5, 0));
+    transform = glm::rotate(transform, glm::radians((float)SDL_GetTicks() / 10.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    transform = glm::scale(transform, glm::vec3(0.5f));
+    shader.setMat4("transform", transform);
+}
+
+void UpdateSecond() {
+    auto transform = glm::mat4(1.0f);
+    transform = glm::translate(transform, glm::vec3(-0.5, -0.5, 0));
+    float scale = std::sin((float)SDL_GetTicks() / 100.0f) + 1; // [-1, 1]
+    scale /= 4;
+    transform = glm::scale(transform, glm::vec3(scale));
+    shader.setMat4("transform", transform);
+}
+
 void Render() {
     glClearColor(0.20f, 0.70f, 0.92f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -112,6 +128,9 @@ void Render() {
     // shader.setFloat("offsetY", offsetY);
     shader.setFloat("proportion", proportion);
     glBindVertexArray(vao);
+    UpdateFirst();
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    UpdateSecond();
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     // glDrawArrays(GL_TRIANGLES, 0, 3);
     glBindVertexArray(0);
@@ -120,7 +139,7 @@ void Render() {
 
 void InitWindow() {
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK)) {
-        std::cerr << fmt::format("Failed to initialize SDL: {}\n", SDL_GetError());
+        fmt::print("Failed to initialize SDL: {}\n", SDL_GetError());
         exit(1);
     }
 
@@ -137,20 +156,20 @@ void InitWindow() {
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
     if (!window) {
-        std::cerr << fmt::format("Failed to create window: {}\n", SDL_GetError());
+        fmt::print("Failed to create window: {}\n", SDL_GetError());
         SDL_Quit();
         exit(2);
     }
 
     context = SDL_GL_CreateContext(window);
     if (context == NULL) {
-        std::cerr << fmt::format("Failed to create opengl context: {}\n", SDL_GetError());
+        fmt::print("Failed to create opengl context: {}\n", SDL_GetError());
         SDL_Quit();
         exit(3);
     }
 
     if (!gladLoadGLLoader((GLADloadproc) SDL_GL_GetProcAddress)) {
-        std::cerr << "Glad was not initilized.\n";
+        fmt::print("Glad was not initilized.\n");
         exit(4);
     }
 }
