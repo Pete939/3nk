@@ -24,6 +24,7 @@ Shader shader;
 
 void InitWindow();
 void ProcessEvents();
+void Update();
 void Render();
 
 int main(int argc, char **argv) {
@@ -37,18 +38,45 @@ int main(int argc, char **argv) {
     const float scale = 1.0f;
 
     float vertices[] = {
-        // positions // colors // texture coords
-        0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f * scale, 1.0f * scale, // top right
-        0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f * scale, 0.0f * scale, // bottom right
-        -0.5f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f * scale, 0.0f * scale, // bottom left
-        -0.5f, 0.5f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f * scale, 1.0f * scale // top left
+        -0.5f, -0.5f, -0.5f, 0.0f, 0.0f,
+        0.5f, -0.5f, -0.5f, 1.0f, 0.0f,
+        0.5f, 0.5f, -0.5f, 1.0f, 1.0f,
+        0.5f, 0.5f, -0.5f, 1.0f, 1.0f,
+        -0.5f, 0.5f, -0.5f, 0.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f, 0.0f, 0.0f,
+        -0.5f, -0.5f, 0.5f, 0.0f, 0.0f,
+        0.5f, -0.5f, 0.5f, 1.0f, 0.0f,
+        0.5f, 0.5f, 0.5f, 1.0f, 1.0f,
+        0.5f, 0.5f, 0.5f, 1.0f, 1.0f,
+        -0.5f, 0.5f, 0.5f, 0.0f, 1.0f,
+        -0.5f, -0.5f, 0.5f, 0.0f, 0.0f,
+        -0.5f, 0.5f, 0.5f, 1.0f, 0.0f,
+        -0.5f, 0.5f, -0.5f, 1.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
+        -0.5f, -0.5f, 0.5f, 0.0f, 0.0f,
+        -0.5f, 0.5f, 0.5f, 1.0f, 0.0f,
+        0.5f, 0.5f, 0.5f, 1.0f, 0.0f,
+        0.5f, 0.5f, -0.5f, 1.0f, 1.0f,
+        0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
+        0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
+        0.5f, -0.5f, 0.5f, 0.0f, 0.0f,
+        0.5f, 0.5f, 0.5f, 1.0f, 0.0f,
+        -0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
+        0.5f, -0.5f, -0.5f, 1.0f, 1.0f,
+        0.5f, -0.5f, 0.5f, 1.0f, 0.0f,
+        0.5f, -0.5f, 0.5f, 1.0f, 0.0f,
+        -0.5f, -0.5f, 0.5f, 0.0f, 0.0f,
+        -0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
+        -0.5f, 0.5f, -0.5f, 0.0f, 1.0f,
+        0.5f, 0.5f, -0.5f, 1.0f, 1.0f,
+        0.5f, 0.5f, 0.5f, 1.0f, 0.0f,
+        0.5f, 0.5f, 0.5f, 1.0f, 0.0f,
+        -0.5f, 0.5f, 0.5f, 0.0f, 0.0f,
+        -0.5f, 0.5f, -0.5f, 0.0f, 1.0f
     };
 
-    uint32_t indices[] = {
-        0, 1, 2,
-        0, 2, 3
-    };
-
+    glEnable(GL_DEPTH_TEST);
 
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
@@ -57,24 +85,15 @@ int main(int argc, char **argv) {
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), NULL);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), NULL);
     glEnableVertexAttribArray(0);
 
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(sizeof(float) * 3));
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *) (sizeof(float) * 3));
     glEnableVertexAttribArray(1);
-
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(sizeof(float) * 6));
-    glEnableVertexAttribArray(2);
-
-    glGenBuffers(1, &ebo);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
     // Unbind
     glBindVertexArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
 
     shader.createShaderProgram(ASSETS_DIR"shaders/triangle.vert", ASSETS_DIR"shaders/triangle.frag");
     shader.use();
@@ -101,38 +120,66 @@ int main(int argc, char **argv) {
     return 0;
 }
 
-void UpdateFirst() {
-    auto transform = glm::mat4(1.0f);
-    transform = glm::translate(transform, glm::vec3(0.5, 0.5, 0));
-    transform = glm::rotate(transform, glm::radians((float)SDL_GetTicks() / 10.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    transform = glm::scale(transform, glm::vec3(0.5f));
-    shader.setMat4("transform", transform);
-}
+// glm::mat4 perspective_matrix(float fov, float aspect, float near, float far)
+// {
+//     glm::mat4 p(0.0f);
+//
+//     float t = std::tan(fov * 0.5f);
+//
+//     p[0][0] = 1.0f / (aspect * t);
+//     p[1][1] = 1.0f / t;
+//
+//     p[2][2] = -(far + near) / (far - near);
+//     p[2][3] = -1.0f;
+//
+//     p[3][2] = -(2.0f * far * near) / (far - near);
+//
+//     return p;
+// }
 
-void UpdateSecond() {
-    auto transform = glm::mat4(1.0f);
-    transform = glm::translate(transform, glm::vec3(-0.5, -0.5, 0));
-    float scale = std::sin((float)SDL_GetTicks() / 100.0f) + 1; // [-1, 1]
-    scale /= 4;
-    transform = glm::scale(transform, glm::vec3(scale));
-    shader.setMat4("transform", transform);
-}
+const int MAX_CUBES = 10;
+
+glm::vec3 cubePositions[MAX_CUBES] = {
+    glm::vec3( 0.0f, 0.0f, 0.0f),
+    glm::vec3( 2.0f, 5.0f, -15.0f),
+    glm::vec3(-1.5f, -2.2f, -2.5f),
+    glm::vec3(-3.8f, -2.0f, -12.3f),
+    glm::vec3( 2.4f, -0.4f, -3.5f),
+    glm::vec3(-1.7f, 3.0f, -7.5f),
+    glm::vec3( 1.3f, -2.0f, -2.5f),
+    glm::vec3( 1.5f, 2.0f, -2.5f),
+    glm::vec3( 1.5f, 0.2f, -1.5f),
+    glm::vec3(-1.3f, 1.0f, -1.5f)
+};
+
+float aspect = (float) screenWidth / (float) screenHeight;
 
 void Render() {
     glClearColor(0.20f, 0.70f, 0.92f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     shader.use();
-    // float offsetX = std::sin(frameStart / 2000.0f) / 2.0f;
-    // shader.setFloat("offsetX", offsetX);
-    // float offsetY = std::cos(frameStart / 2000.0f) / 2.0f;
-    // shader.setFloat("offsetY", offsetY);
     shader.setFloat("proportion", proportion);
     glBindVertexArray(vao);
-    UpdateFirst();
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-    UpdateSecond();
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-    // glDrawArrays(GL_TRIANGLES, 0, 3);
+
+    auto view = glm::mat4(1.0f);
+    view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+    auto projection = glm::perspective(glm::radians(45.0f), aspect, 0.1f, 100.0f);
+    shader.setMat4("view", view);
+    shader.setMat4("projection", projection);
+
+    for (int i = 0; i < MAX_CUBES; ++i) {
+        auto model = glm::mat4(1.0f);
+        model = glm::translate(model, cubePositions[i]);
+        float t = (float)SDL_GetTicks() / 1000.0f;
+        float angle = 20.0f * (float)i;
+        if (i % 3 == 0) {
+            angle *= t;
+        }
+        model = glm::rotate(model, glm::radians(angle), glm::vec3(0.5f, 1.0f, 0.0f));
+        shader.setMat4("model", model);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+    }
+
     glBindVertexArray(0);
     SDL_GL_SwapWindow(window);
 }
@@ -190,12 +237,6 @@ void ProcessEvents() {
                 if (wireframeMode) {
                     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
                 }
-            }
-            if (event.key.scancode == SDL_SCANCODE_DOWN) {
-                proportion = std::max(0.0f, proportion - 0.02f);
-            }
-            if (event.key.scancode == SDL_SCANCODE_UP) {
-                proportion = std::min(1.0f, proportion + 0.02f);
             }
         }
     }
