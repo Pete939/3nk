@@ -4,6 +4,7 @@
 #include <fstream>
 #include <sstream>
 #include <fmt/core.h>
+#include <glm/gtc/type_ptr.hpp>
 
 
 Shader::Shader() : id(-1) {

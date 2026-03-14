@@ -4,9 +4,12 @@
 #include <filesystem>
 #include <cmath>
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <stb/stb_image.h>
-#include "texture/Texture.h"
-#include "shader/Shader.h"
+
+#include "Camera/Camera.h"
+#include "Texture/Texture.h"
+#include "Shader/Shader.h"
 
 const char *title = "OpenGL";
 int screenWidth = 800;
@@ -21,10 +24,12 @@ uint64_t frameStart;
 SDL_Event event;
 uint32_t vao, vbo, ebo;
 Shader shader;
+Camera camera;
 
 void InitWindow();
+
 void ProcessEvents();
-void Update();
+
 void Render();
 
 int main(int argc, char **argv) {
@@ -34,8 +39,6 @@ int main(int argc, char **argv) {
     fmt::print("Current path: {}\n", path);
 
     InitWindow();
-
-    const float scale = 1.0f;
 
     float vertices[] = {
         -0.5f, -0.5f, -0.5f, 0.0f, 0.0f,
@@ -105,9 +108,15 @@ int main(int argc, char **argv) {
     shader.setInt("Texture1", 1);
 
 
+    float deltaTime = 0.0f;
+    float lastFrame = 0.0f;
     while (running) {
-        frameStart = SDL_GetTicks();
+        float currentFrame = (float) SDL_GetTicks() / 1000.0f;
+        deltaTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;
+
         ProcessEvents();
+        camera.Move(deltaTime);
         Render();
 
         uint64_t frameEnd = SDL_GetTicks();
@@ -120,35 +129,17 @@ int main(int argc, char **argv) {
     return 0;
 }
 
-// glm::mat4 perspective_matrix(float fov, float aspect, float near, float far)
-// {
-//     glm::mat4 p(0.0f);
-//
-//     float t = std::tan(fov * 0.5f);
-//
-//     p[0][0] = 1.0f / (aspect * t);
-//     p[1][1] = 1.0f / t;
-//
-//     p[2][2] = -(far + near) / (far - near);
-//     p[2][3] = -1.0f;
-//
-//     p[3][2] = -(2.0f * far * near) / (far - near);
-//
-//     return p;
-// }
-
 const int MAX_CUBES = 10;
-
 glm::vec3 cubePositions[MAX_CUBES] = {
-    glm::vec3( 0.0f, 0.0f, 0.0f),
-    glm::vec3( 2.0f, 5.0f, -15.0f),
+    glm::vec3(0.0f, 0.0f, 0.0f),
+    glm::vec3(2.0f, 5.0f, -15.0f),
     glm::vec3(-1.5f, -2.2f, -2.5f),
     glm::vec3(-3.8f, -2.0f, -12.3f),
-    glm::vec3( 2.4f, -0.4f, -3.5f),
+    glm::vec3(2.4f, -0.4f, -3.5f),
     glm::vec3(-1.7f, 3.0f, -7.5f),
-    glm::vec3( 1.3f, -2.0f, -2.5f),
-    glm::vec3( 1.5f, 2.0f, -2.5f),
-    glm::vec3( 1.5f, 0.2f, -1.5f),
+    glm::vec3(1.3f, -2.0f, -2.5f),
+    glm::vec3(1.5f, 2.0f, -2.5f),
+    glm::vec3(1.5f, 0.2f, -1.5f),
     glm::vec3(-1.3f, 1.0f, -1.5f)
 };
 
@@ -160,18 +151,17 @@ void Render() {
     shader.use();
     shader.setFloat("proportion", proportion);
     glBindVertexArray(vao);
-
-    auto view = glm::mat4(1.0f);
-    view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+    // Does not have to be constructed on each iteration if no zoom is applied.
     auto projection = glm::perspective(glm::radians(45.0f), aspect, 0.1f, 100.0f);
+    auto view = camera.GetMatrix();
     shader.setMat4("view", view);
     shader.setMat4("projection", projection);
 
     for (int i = 0; i < MAX_CUBES; ++i) {
         auto model = glm::mat4(1.0f);
         model = glm::translate(model, cubePositions[i]);
-        float t = (float)SDL_GetTicks() / 1000.0f;
-        float angle = 20.0f * (float)i;
+        float t = (float) SDL_GetTicks() / 1000.0f;
+        float angle = 20.0f * (float) i;
         if (i % 3 == 0) {
             angle *= t;
         }
@@ -190,11 +180,14 @@ void InitWindow() {
         exit(1);
     }
 
+    unsigned long int flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE;
+    // flags |= SDL_WINDOW_FULLSCREEN;
+    // flags |= SDL_WINDOW_BORDERLESS;
     window = SDL_CreateWindow(
         title,
         screenWidth,
         screenHeight,
-        SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+        flags);
 
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
@@ -219,6 +212,8 @@ void InitWindow() {
         fmt::print("Glad was not initilized.\n");
         exit(4);
     }
+
+    SDL_SetWindowRelativeMouseMode(window, true);
 }
 
 void ProcessEvents() {

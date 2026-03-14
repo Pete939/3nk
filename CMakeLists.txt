@@ -12,9 +12,10 @@ find_package(fmt REQUIRED)
 
 add_executable(OpenGL source/Main.cpp
         source/glad.c
-        source/shader/Shader.cpp
+        source/Shader/Shader.cpp
         source/stb_image.c
-        source/texture/Texture.cpp)
+        source/Texture/Texture.cpp
+        source/Camera/Camera.cpp)
 
 target_include_directories(OpenGL
         PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/glad
