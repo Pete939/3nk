@@ -3,6 +3,7 @@
 #include "glad/glad.h"
 #include <filesystem>
 #include <cmath>
+#include <vector>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <stb/stb_image.h>
@@ -10,8 +11,11 @@
 #include "Camera/Camera.h"
 #include "Texture/Texture.h"
 #include "Shader/Shader.h"
+#include "Model/Importer.h"
+#include "Error/glError.hpp"
+#include "Model/Model.hpp"
 
-const char *title = "OpenGL";
+const char *title = "Model loading";
 int screenWidth = 800;
 int screenHeight = 600;
 SDL_Window *window;
@@ -22,9 +26,10 @@ bool wireframeMode = false;
 uint32_t targetFrameTime = 16; // 16ms ~ 60fps
 uint64_t frameStart;
 SDL_Event event;
-uint32_t vao, vbo, ebo;
 Shader shader;
 Camera camera;
+Importer importer;
+Model triangles;
 
 void InitWindow();
 
@@ -40,73 +45,19 @@ int main(int argc, char **argv) {
 
     InitWindow();
 
-    float vertices[] = {
-        -0.5f, -0.5f, -0.5f, 0.0f, 0.0f,
-        0.5f, -0.5f, -0.5f, 1.0f, 0.0f,
-        0.5f, 0.5f, -0.5f, 1.0f, 1.0f,
-        0.5f, 0.5f, -0.5f, 1.0f, 1.0f,
-        -0.5f, 0.5f, -0.5f, 0.0f, 1.0f,
-        -0.5f, -0.5f, -0.5f, 0.0f, 0.0f,
-        -0.5f, -0.5f, 0.5f, 0.0f, 0.0f,
-        0.5f, -0.5f, 0.5f, 1.0f, 0.0f,
-        0.5f, 0.5f, 0.5f, 1.0f, 1.0f,
-        0.5f, 0.5f, 0.5f, 1.0f, 1.0f,
-        -0.5f, 0.5f, 0.5f, 0.0f, 1.0f,
-        -0.5f, -0.5f, 0.5f, 0.0f, 0.0f,
-        -0.5f, 0.5f, 0.5f, 1.0f, 0.0f,
-        -0.5f, 0.5f, -0.5f, 1.0f, 1.0f,
-        -0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
-        -0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
-        -0.5f, -0.5f, 0.5f, 0.0f, 0.0f,
-        -0.5f, 0.5f, 0.5f, 1.0f, 0.0f,
-        0.5f, 0.5f, 0.5f, 1.0f, 0.0f,
-        0.5f, 0.5f, -0.5f, 1.0f, 1.0f,
-        0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
-        0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
-        0.5f, -0.5f, 0.5f, 0.0f, 0.0f,
-        0.5f, 0.5f, 0.5f, 1.0f, 0.0f,
-        -0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
-        0.5f, -0.5f, -0.5f, 1.0f, 1.0f,
-        0.5f, -0.5f, 0.5f, 1.0f, 0.0f,
-        0.5f, -0.5f, 0.5f, 1.0f, 0.0f,
-        -0.5f, -0.5f, 0.5f, 0.0f, 0.0f,
-        -0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
-        -0.5f, 0.5f, -0.5f, 0.0f, 1.0f,
-        0.5f, 0.5f, -0.5f, 1.0f, 1.0f,
-        0.5f, 0.5f, 0.5f, 1.0f, 0.0f,
-        0.5f, 0.5f, 0.5f, 1.0f, 0.0f,
-        -0.5f, 0.5f, 0.5f, 0.0f, 0.0f,
-        -0.5f, 0.5f, -0.5f, 0.0f, 1.0f
-    };
-
     glEnable(GL_DEPTH_TEST);
 
-    glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
-
-    glGenBuffers(1, &vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), NULL);
-    glEnableVertexAttribArray(0);
-
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *) (sizeof(float) * 3));
-    glEnableVertexAttribArray(1);
-
-    // Unbind
-    glBindVertexArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-
     shader.createShaderProgram(ASSETS_DIR"shaders/triangle.vert", ASSETS_DIR"shaders/triangle.frag");
-    shader.use();
-    Texture texture0(ASSETS_DIR"textures/container.jpg");
-    Texture texture1(ASSETS_DIR"textures/awesomeface.png");
-    texture0.use(0);
-    texture1.use(1);
-    shader.setInt("Texture0", 0);
-    shader.setInt("Texture1", 1);
 
+    std::vector<uint16_t> indices;
+    std::vector<float> vertices;
+    // importer.LoadJSON(ASSETS_DIR"models/triangle-sparse/triangle-sparse.gltf", triangles);
+    // importer.LoadJSON(ASSETS_DIR"models/simple-mesh/scene.gltf", triangles);
+    // importer.LoadJSON(ASSETS_DIR"models/triangle.gltf", triangles);
+    // importer.LoadJSON(ASSETS_DIR"models/cube/cube.gltf", triangles);
+    // importer.LoadJSON(ASSETS_DIR"models/material-triangle/scene.gltf", triangles);
+    importer.LoadJSON(ASSETS_DIR"models/simple-texture/scene.gltf", triangles);
+    triangles.InitOpenGLBuffers();
 
     float deltaTime = 0.0f;
     float lastFrame = 0.0f;
@@ -129,47 +80,21 @@ int main(int argc, char **argv) {
     return 0;
 }
 
-const int MAX_CUBES = 10;
-glm::vec3 cubePositions[MAX_CUBES] = {
-    glm::vec3(0.0f, 0.0f, 0.0f),
-    glm::vec3(2.0f, 5.0f, -15.0f),
-    glm::vec3(-1.5f, -2.2f, -2.5f),
-    glm::vec3(-3.8f, -2.0f, -12.3f),
-    glm::vec3(2.4f, -0.4f, -3.5f),
-    glm::vec3(-1.7f, 3.0f, -7.5f),
-    glm::vec3(1.3f, -2.0f, -2.5f),
-    glm::vec3(1.5f, 2.0f, -2.5f),
-    glm::vec3(1.5f, 0.2f, -1.5f),
-    glm::vec3(-1.3f, 1.0f, -1.5f)
-};
-
 float aspect = (float) screenWidth / (float) screenHeight;
 
 void Render() {
     glClearColor(0.20f, 0.70f, 0.92f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    shader.use();
-    shader.setFloat("proportion", proportion);
-    glBindVertexArray(vao);
+    // shader.setFloat("proportion", proportion);
     // Does not have to be constructed on each iteration if no zoom is applied.
     auto projection = glm::perspective(glm::radians(45.0f), aspect, 0.1f, 100.0f);
     auto view = camera.GetMatrix();
+    shader.use();
+    // auto model = glm::mat4(1.0f);
+    // shader.setMat4("model", model);
     shader.setMat4("view", view);
     shader.setMat4("projection", projection);
-
-    for (int i = 0; i < MAX_CUBES; ++i) {
-        auto model = glm::mat4(1.0f);
-        model = glm::translate(model, cubePositions[i]);
-        float t = (float) SDL_GetTicks() / 1000.0f;
-        float angle = 20.0f * (float) i;
-        if (i % 3 == 0) {
-            angle *= t;
-        }
-        model = glm::rotate(model, glm::radians(angle), glm::vec3(0.5f, 1.0f, 0.0f));
-        shader.setMat4("model", model);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-    }
-
+    triangles.Render(shader);
     glBindVertexArray(0);
     SDL_GL_SwapWindow(window);
 }
@@ -213,7 +138,7 @@ void InitWindow() {
         exit(4);
     }
 
-    SDL_SetWindowRelativeMouseMode(window, true);
+    // SDL_SetWindowRelativeMouseMode(window, true);
 }
 
 void ProcessEvents() {

@@ -15,11 +15,19 @@ add_executable(OpenGL source/Main.cpp
         source/Shader/Shader.cpp
         source/stb_image.c
         source/Texture/Texture.cpp
-        source/Camera/Camera.cpp)
+        source/Camera/Camera.cpp
+        source/Model/Importer.cpp
+        source/Model/Model.cpp
+        source/Model/Mesh.cpp
+        source/Model/Node.cpp
+        source/Model/Node.hpp)
 
 target_include_directories(OpenGL
         PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/glad
-        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/stb)
+        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/stb
+        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/nlohmann
+        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/base64
+)
 
 
 find_package(SDL3 CONFIG REQUIRED)
