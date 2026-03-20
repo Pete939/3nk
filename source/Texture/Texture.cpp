@@ -2,7 +2,6 @@
 #include <iostream>
 #include <fmt/core.h>
 #include <stb/stb_image.h>
-#include <stb/stb_image_resize2.h>
 #include <glad/glad.h>
 #include "Texture.h"
 #include <cmath>

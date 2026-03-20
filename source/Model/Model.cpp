@@ -47,10 +47,10 @@ void Model::Render(Shader &shader) {
 void Model::InitOpenGLBuffers() {
     for (auto & mesh : meshes) {
         mesh.InitOpenGLBuffers();
-    }
-    if (!textures.empty()) {
-        std::string path = directory + textures[0].path;
-        textures[0].load(path);
+        if (mesh.materialIndex >= 0) {
+            std::string path = directory + textures[mesh.materialIndex].path;
+            textures[mesh.materialIndex].load(path);
+        }
     }
 }
 

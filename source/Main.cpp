@@ -61,6 +61,7 @@ int main(int argc, char **argv) {
         // ASSETS_DIR"models/simple-texture/scene.gltf",
         ASSETS_DIR"models/cube-textured/scene.gltf",
         ASSETS_DIR"models/cube-textured-non-power-of-two/scene.gltf",
+        ASSETS_DIR"models/cube textured with spaces/scene.gltf",
         // ASSETS_DIR"models/duck/scene.gltf",
         // ASSETS_DIR"models/skull/scene.gltf",
         // ASSETS_DIR"models/birthday_cake/scene.gltf",
@@ -155,7 +156,7 @@ void InitWindow() {
         exit(4);
     }
 
-    SDL_SetWindowRelativeMouseMode(window, true);
+    // SDL_SetWindowRelativeMouseMode(window, true);
 }
 
 void ProcessEvents() {
