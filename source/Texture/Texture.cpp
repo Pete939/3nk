@@ -2,8 +2,10 @@
 #include <iostream>
 #include <fmt/core.h>
 #include <stb/stb_image.h>
+#include <stb/stb_image_resize2.h>
 #include <glad/glad.h>
-#include "./Texture.h"
+#include "Texture.h"
+#include <cmath>
 
 void Texture::load(std::string path) {
     this->path = path;
@@ -15,6 +17,7 @@ void Texture::load(std::string path) {
         std::cerr << fmt::format("Failed to load texture: {}\n", path);
         exit(1);
     }
+
     uint32_t texture;
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture);
@@ -25,7 +28,7 @@ void Texture::load(std::string path) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, sampler.magFilter);
 
 
-    GLint format;
+    GLint format, internalFormat;
     if (nrChannels == 1) {
         format = GL_RED;
     }
@@ -35,8 +38,9 @@ void Texture::load(std::string path) {
     else if (nrChannels == 4) {
         format = GL_RGBA;
     }
-
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height,
+    internalFormat = format;
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height,
         0, format, GL_UNSIGNED_BYTE, data);
     glGenerateMipmap(GL_TEXTURE_2D);
     stbi_image_free(data);
