@@ -16,6 +16,5 @@ public:
     std::vector<float> normals;
     std::vector<float> texCoords;
     std::vector<uint16_t> indices;
-    int materialIndex;
-private:
+    int materialIndex = -1;
 };

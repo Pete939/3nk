@@ -29,7 +29,7 @@ SDL_Event event;
 Shader shader;
 Camera camera;
 Importer importer;
-Model triangles;
+std::vector<Model> models;
 
 void InitWindow();
 
@@ -49,15 +49,28 @@ int main(int argc, char **argv) {
 
     shader.createShaderProgram(ASSETS_DIR"shaders/triangle.vert", ASSETS_DIR"shaders/triangle.frag");
 
-    std::vector<uint16_t> indices;
-    std::vector<float> vertices;
-    // importer.LoadJSON(ASSETS_DIR"models/triangle-sparse/triangle-sparse.gltf", triangles);
-    // importer.LoadJSON(ASSETS_DIR"models/simple-mesh/scene.gltf", triangles);
-    // importer.LoadJSON(ASSETS_DIR"models/triangle.gltf", triangles);
-    // importer.LoadJSON(ASSETS_DIR"models/cube/cube.gltf", triangles);
-    // importer.LoadJSON(ASSETS_DIR"models/material-triangle/scene.gltf", triangles);
-    importer.LoadJSON(ASSETS_DIR"models/simple-texture/scene.gltf", triangles);
-    triangles.InitOpenGLBuffers();
+    std::vector<std::string> paths = {
+        ASSETS_DIR"models/triangle-sparse/triangle-sparse.gltf",
+        ASSETS_DIR"models/simple-mesh/scene.gltf",
+        ASSETS_DIR"models/triangle/scene.gltf",
+        ASSETS_DIR"models/cube/cube.gltf",
+        ASSETS_DIR"models/cube-interleaved/scene.gltf",
+        // ASSETS_DIR"models/suzanne/scene.gltf",
+        // ASSETS_DIR"models/avocado/scene.gltf",
+        ASSETS_DIR"models/cube-textured/scene.gltf",
+        ASSETS_DIR"models/material-triangle/scene.gltf",
+        ASSETS_DIR"models/simple-texture/scene.gltf",
+        // ASSETS_DIR"models/duck/scene.gltf",
+        // ASSETS_DIR"models/skull/scene.gltf",
+        // ASSETS_DIR"models/birthday_cake/scene.gltf",
+    };
+
+    models.resize(paths.size());
+    for (size_t i = 0; i < models.size(); ++i) {
+        importer.LoadJSON(paths[i].c_str(), models[i]);
+        models[i].InitOpenGLBuffers();
+    }
+
 
     float deltaTime = 0.0f;
     float lastFrame = 0.0f;
@@ -85,16 +98,19 @@ float aspect = (float) screenWidth / (float) screenHeight;
 void Render() {
     glClearColor(0.20f, 0.70f, 0.92f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    // shader.setFloat("proportion", proportion);
-    // Does not have to be constructed on each iteration if no zoom is applied.
     auto projection = glm::perspective(glm::radians(45.0f), aspect, 0.1f, 100.0f);
     auto view = camera.GetMatrix();
     shader.use();
-    // auto model = glm::mat4(1.0f);
-    // shader.setMat4("model", model);
     shader.setMat4("view", view);
     shader.setMat4("projection", projection);
-    triangles.Render(shader);
+    float start = -(float)models.size() * 2.0f;
+    for (size_t i = 0; i < models.size(); ++i) {
+        auto transform = glm::mat4(1.0f);
+        transform = glm::translate(transform, glm::vec3(start + (float)i * 2.5f, 0.0f, -2.0f));
+        // transform = glm::scale(transform, glm::vec3(10.0f));
+        shader.setMat4("model", transform);
+        models[i].Render(shader);
+    }
     glBindVertexArray(0);
     SDL_GL_SwapWindow(window);
 }
@@ -138,7 +154,7 @@ void InitWindow() {
         exit(4);
     }
 
-    // SDL_SetWindowRelativeMouseMode(window, true);
+    SDL_SetWindowRelativeMouseMode(window, true);
 }
 
 void ProcessEvents() {
