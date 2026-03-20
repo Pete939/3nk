@@ -1,0 +1,11 @@
+Model Information:
+* title:	Birthday cake
+* source:	https://sketchfab.com/3d-models/birthday-cake-860750e2583a4ec5a7595b21768b8f60
+* author:	sauti (https://sketchfab.com/sauti)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Birthday cake" (https://sketchfab.com/3d-models/birthday-cake-860750e2583a4ec5a7595b21768b8f60) by sauti (https://sketchfab.com/sauti) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
