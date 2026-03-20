@@ -120,6 +120,7 @@ namespace gltf {
             std::optional<int> position;
             std::optional<int> normal;
             std::optional<int> texCoord; // FIXME: int -> vector<int>?
+            std::optional<int> color;
         } attributes;
 
         std::optional<int> indices;

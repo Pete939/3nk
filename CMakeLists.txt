@@ -20,7 +20,8 @@ add_executable(OpenGL source/Main.cpp
         source/Model/Model.cpp
         source/Model/Mesh.cpp
         source/Model/Node.cpp
-        source/Model/Node.hpp)
+        source/Model/Node.hpp
+        source/Model/WhiteTexture.hpp)
 
 target_include_directories(OpenGL
         PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/glad

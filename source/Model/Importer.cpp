@@ -172,6 +172,11 @@ void Importer::LoadJSON(const char *filename, Model &model) {
                 int texCoord = jsonMeshPrimitive[i]["attributes"]["TEXCOORD_0"];
                 primitive.attributes.texCoord = texCoord;
             }
+
+            if (jsonMeshPrimitive[i]["attributes"].contains("COLOR_0")) {
+                int color = jsonMeshPrimitive[i]["attributes"]["COLOR_0"];
+                primitive.attributes.color = color;
+            }
         }
     }
 
@@ -346,10 +351,10 @@ void Importer::LoadJSON(const char *filename, Model &model) {
     }
 
     // Decide which accessor is for positions and which for indices (Mesh?)
+    // TODO: Remove the repetition in the future.
     for (size_t i = 0; i < meshes.size(); ++i) {
         auto &mesh = meshes[i];
         std::vector<int> accessors_;
-        // NOTE: Very efficient code 🤓
         for (auto &primitive: mesh.primitives) {
             if (primitive.indices.has_value()) {
                 accessors_.push_back(primitive.indices.value());
@@ -363,6 +368,9 @@ void Importer::LoadJSON(const char *filename, Model &model) {
             }
             if (attr.texCoord.has_value()) {
                 accessors_.push_back(attr.texCoord.value());
+            }
+            if (attr.color.has_value()) {
+                accessors_.push_back(attr.color.value());
             }
         }
         for (int accIdx : accessors_) {
@@ -385,6 +393,24 @@ void Importer::LoadJSON(const char *filename, Model &model) {
                     continue;
                 }
             }
+
+            // Vertex colors
+            if (mesh.primitives[0].attributes.color.has_value()) {
+                if (mesh.primitives[0].attributes.color.value() == accIdx) {
+                    size_t stride = bufferView.byteStride ? bufferView.byteStride : sizeof(float) * 3;
+                    size_t jmp = stride / sizeof(float);
+                    model.meshes[i].colors.resize(accessor.count * 3);
+                    auto ptr = (float*)(buffer.uri.data() + bufferView.byteOffset + accessor.byteOffset);
+                    for (size_t j = 0; j < accessor.count; ++j) {
+                        size_t src = j * jmp;
+                        size_t dst = j * 3;
+                        model.meshes[i].colors[dst + 0] = ptr[src + 0];
+                        model.meshes[i].colors[dst + 1] = ptr[src + 1];
+                        model.meshes[i].colors[dst + 2] = ptr[src + 2];
+                    }
+                }
+            }
+
             // Vertices
             if (accessor.componentType == GL_FLOAT && accessor.type == "VEC3") {
                 // fmt::print("POSITIONS\n");

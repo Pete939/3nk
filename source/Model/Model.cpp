@@ -1,8 +1,10 @@
 
 #include "Model.hpp"
+#include "WhiteTexture.hpp"
 
 #include <iostream>
 #include <fmt/core.h>
+
 GLenum glCheckError_(const char *file, int line)
 {
     GLenum errorCode;
@@ -38,6 +40,9 @@ void Model::Render(Shader &shader) {
             if (mesh.materialIndex >= 0) {
                 // TODO: Keep n=0?
                 textures[mesh.materialIndex].use(0);
+            }
+            else {
+                glBindTexture(GL_TEXTURE_2D, GetWhiteTexture());
             }
             mesh.Render(shader);
         }

@@ -9,7 +9,7 @@ void Mesh::Render(Shader &shader) {
 }
 
 void Mesh::InitOpenGLBuffers() {
-    uint32_t vbo, vboUV, ebo;
+    uint32_t vbo, vboUV, vboCol, ebo;
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
 
@@ -17,11 +17,7 @@ void Mesh::InitOpenGLBuffers() {
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
 
-    glGenBuffers(1, &ebo);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint16_t), indices.data(), GL_STATIC_DRAW);
-
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), NULL);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
     glEnableVertexAttribArray(0);
 
     if (!texCoords.empty()) {
@@ -32,6 +28,21 @@ void Mesh::InitOpenGLBuffers() {
         glEnableVertexAttribArray(1);
     }
 
+    if (!colors.empty()) {
+        glGenBuffers(1, &vboCol);
+        glBindBuffer(GL_ARRAY_BUFFER, vboCol);
+        glBufferData(GL_ARRAY_BUFFER, colors.size() * sizeof(float), colors.data(), GL_STATIC_DRAW);
+        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+        glEnableVertexAttribArray(2);
+    }
+    else {
+        glDisableVertexAttribArray(2);
+        glVertexAttrib3f(2, 1.0f, 1.0f, 1.0f); // white
+    }
+
+    glGenBuffers(1, &ebo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint16_t), indices.data(), GL_STATIC_DRAW);
 
 
     // Unbind
