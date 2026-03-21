@@ -9,7 +9,7 @@
 
 class Importer {
 public:
-    Importer() {};
+    Importer() = default;
     void LoadJSON(const char *filename, Model &model);
 };
 
@@ -174,3 +174,14 @@ namespace gltf {
         TRIANGLE_FAN = 6
     };
 }
+
+struct ImportCtx {
+    std::vector<gltf::Accessor> accessors;
+    std::vector<gltf::Buffer> buffers;
+    std::vector<gltf::BufferView> bufferViews;
+    std::vector<gltf::Image> images;
+    std::vector<gltf::Material> materials;
+    std::vector<gltf::Mesh> meshes;
+    std::vector<gltf::Sampler> samplers;
+    std::vector<gltf::Texture> textures;
+};

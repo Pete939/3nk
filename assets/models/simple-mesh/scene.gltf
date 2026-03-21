@@ -2,7 +2,7 @@
   "scene": 0,
   "scenes" : [
     {
-      "nodes" : [ 0, 1]
+      "nodes" : [ 0, 1, 2]
     }
   ],
   "nodes" : [

@@ -1,8 +1,3 @@
-/* If a member of a struct/class is of type std::optional<T> it means that according to
- * the glt2 specification it is not a required property and does NOT have a default value.
- * If a member is not required but has a default value, then this value should be specified in the
- * struct/class definition for that member.
-*/
 
 #include "Importer.h"
 #include "nlohmann/json.hpp"
@@ -16,10 +11,23 @@
 
 #include "stb/stb_image.h"
 
-// #include <iostream>
-
-#define ARRAY_BUFFER 34962
-#define ELEMENT_ARRAY_BUFFER 34963
+template <typename T>
+void LoadModelAttribute(ImportCtx &ctx,std::vector<T> &meshAttr, uint32_t accessorIndex, uint32_t amountPerDataType) {
+    auto &accessor = ctx.accessors[accessorIndex];
+    auto &bufferView = ctx.bufferViews[accessor.bufferView.value()];
+    auto &buffer = ctx.buffers[bufferView.buffer];
+    size_t stride = bufferView.byteStride ? bufferView.byteStride : sizeof(T) * amountPerDataType;
+    size_t jmp = stride / sizeof(T);
+    meshAttr.resize(accessor.count * amountPerDataType);
+    auto ptr = (T*)(buffer.uri.data() + bufferView.byteOffset + accessor.byteOffset);
+    for (size_t i = 0; i < accessor.count; ++i) {
+        size_t src = i * jmp;
+        size_t dst = i * amountPerDataType;
+        for (size_t j = 0; j < amountPerDataType; ++j) {
+            meshAttr[dst + j] = ptr[src + j];
+        }
+    }
+}
 
 std::string decodeUri(const std::string &uri) {
     std::string result;
@@ -39,32 +47,6 @@ std::string decodeUri(const std::string &uri) {
 }
 
 using json = nlohmann::json;
-uint32_t loadTexture(const std::string &path) {
-    int width, height, nrChannels;
-    stbi_set_flip_vertically_on_load(true);
-    uint8_t *data = stbi_load(path.c_str(), &width,
-        &height, &nrChannels, 0);
-    if (!data) {
-        fmt::print("Failed to load texture: {}\n", path);
-        exit(1);
-    }
-    uint32_t texture;
-    glGenTextures(1, &texture);
-    glBindTexture(GL_TEXTURE_2D, texture);
-    std::string filetype = path.substr(path.length() - 3, 3);
-    GLint format = GL_RGB;
-    if (filetype == "png") {
-        format = GL_RGBA;
-    }
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height,
-        0, format, GL_UNSIGNED_BYTE, data);
-    glGenerateMipmap(GL_TEXTURE_2D);
-    stbi_image_free(data);
-    return texture;
-}
-
-// TODO: Basic Texture support
-// TODO: byteStride support
 void Importer::LoadJSON(const char *filename, Model &model) {
     std::ifstream file(filename);
     if (!file.good()) {
@@ -92,9 +74,8 @@ void Importer::LoadJSON(const char *filename, Model &model) {
     counts["texture"] = input["textures"].size();
     counts["image"] = input["images"].size();
     counts["sampler"] = input["samplers"].size();
-    for (const std::pair<const std::string, size_t> &count: counts) {
-        fmt::print("{} count: {}\n", count.first, count.second);
-    }
+
+    ImportCtx ctx{};
 
     // std::vector<gltf::Node> nodes{counts["node"]};
     model.nodes.resize(counts["node"]);
@@ -105,7 +86,9 @@ void Importer::LoadJSON(const char *filename, Model &model) {
         if (jnode.contains("children")) {
             node.childrenIndices.resize(jnode["children"].size());
             for (size_t j = 0; j < node.childrenIndices.size(); ++j) {
-                node.childrenIndices[j] = jnode["children"][j];
+                uint32_t childIndex =  jnode["children"][j];
+                node.childrenIndices[j] = childIndex;
+                model.nodes[childIndex].parentIndex = i;
             }
         }
 
@@ -144,68 +127,64 @@ void Importer::LoadJSON(const char *filename, Model &model) {
     }
 
     model.meshes.resize(counts["mesh"]);
-    std::vector<gltf::Mesh> meshes{counts["mesh"]};
-    for (size_t i = 0; i < meshes.size(); ++i) {
+    ctx.meshes.resize(counts["mesh"]);
+    for (size_t i = 0; i < ctx.meshes.size(); ++i) {
         auto &jsonMeshPrimitive = input["meshes"][i]["primitives"];
         size_t primitivesCount = jsonMeshPrimitive.size();
-        meshes[i].primitives.resize(primitivesCount);
-        for (auto &primitive: meshes[i].primitives) {
-            if (jsonMeshPrimitive[i].contains("indices")) {
-                int indices = jsonMeshPrimitive[i]["indices"];
+        ctx.meshes[i].primitives.resize(primitivesCount);
+        for (size_t j = 0; j < ctx.meshes[i].primitives.size(); ++j) {
+            auto &primitive = ctx.meshes[i].primitives[j];
+            if (jsonMeshPrimitive[j].contains("indices")) {
+                int indices = jsonMeshPrimitive[j]["indices"];
                 primitive.indices = indices;
             }
-            if (jsonMeshPrimitive[i].contains("material")) {
-                int material = jsonMeshPrimitive[i]["material"];
+            if (jsonMeshPrimitive[j].contains("material")) {
+                int material = jsonMeshPrimitive[j]["material"];
                 primitive.material = material;
             }
 
-            if (jsonMeshPrimitive[i]["attributes"].contains("NORMAL")) {
-                int normal = jsonMeshPrimitive[i]["attributes"]["NORMAL"];
+            if (jsonMeshPrimitive[j]["attributes"].contains("NORMAL")) {
+                int normal = jsonMeshPrimitive[j]["attributes"]["NORMAL"];
                 primitive.attributes.normal = normal;
             }
-            if (jsonMeshPrimitive[i]["attributes"].contains("POSITION")) {
-                int position = jsonMeshPrimitive[i]["attributes"]["POSITION"];
+            if (jsonMeshPrimitive[j]["attributes"].contains("POSITION")) {
+                int position = jsonMeshPrimitive[j]["attributes"]["POSITION"];
                 primitive.attributes.position = position;
             }
             // FIXME: Support more texcoords (0-N)
-            if (jsonMeshPrimitive[i]["attributes"].contains("TEXCOORD_0")) {
-                int texCoord = jsonMeshPrimitive[i]["attributes"]["TEXCOORD_0"];
+            if (jsonMeshPrimitive[j]["attributes"].contains("TEXCOORD_0")) {
+                int texCoord = jsonMeshPrimitive[j]["attributes"]["TEXCOORD_0"];
                 primitive.attributes.texCoord = texCoord;
             }
 
-            if (jsonMeshPrimitive[i]["attributes"].contains("COLOR_0")) {
-                int color = jsonMeshPrimitive[i]["attributes"]["COLOR_0"];
+            if (jsonMeshPrimitive[j]["attributes"].contains("COLOR_0")) {
+                int color = jsonMeshPrimitive[j]["attributes"]["COLOR_0"];
                 primitive.attributes.color = color;
             }
         }
     }
 
-    std::vector<gltf::Material> materials;
-    materials.resize(counts["material"]);
-    for (size_t i = 0; i < materials.size(); ++i) {
-        auto &material = materials[i];
+    ctx.materials.resize(counts["material"]);
+    for (size_t i = 0; i < ctx.materials.size(); ++i) {
+        auto &material = ctx.materials[i];
         auto &jsonMaterial = input["materials"][i];
         if (jsonMaterial.contains("pbrMetallicRoughness")) {
-            if (jsonMaterial["pbrMetallicRoughness"].contains("baseColorTexture")) {
+            auto &jsonMR = jsonMaterial["pbrMetallicRoughness"];
+            if (jsonMR.contains("baseColorTexture")) {
                 gltf::TextureInfo info;
-                info.index =  jsonMaterial["pbrMetallicRoughness"]["baseColorTexture"]["index"];
-                material.pbrMetallicRoughness.baseColorTexture.emplace(info);
+                info.index =  jsonMR["baseColorTexture"]["index"];
+                material.pbrMetallicRoughness.baseColorTexture = info;
             }
         }
     }
 
-    std::vector<gltf::Texture> textures;
-    textures.resize(counts["texture"]);
-    for (size_t i = 0; i < textures.size(); ++i) {
-        auto &texture = textures[i];
+    ctx.textures.resize(counts["texture"]);
+    for (size_t i = 0; i < ctx.textures.size(); ++i) {
+        auto &texture = ctx.textures[i];
         auto &jsonTexture = input["textures"][i];
         if (jsonTexture.contains("sampler")) {
             texture.sampler = jsonTexture["sampler"];
         }
-        // else {
-        //     fmt::print(stderr, "No undefined sampler support for texture!\n");
-        //     exit(4);
-        // }
         if (jsonTexture.contains("source")) {
             texture.source = jsonTexture["source"];
         }
@@ -215,10 +194,9 @@ void Importer::LoadJSON(const char *filename, Model &model) {
         }
     }
 
-    std::vector<gltf::Sampler> samplers;
-    samplers.resize(counts["sampler"]);
-    for (size_t i = 0; i < samplers.size(); ++i) {
-        auto &sampler = samplers[i];
+    ctx.samplers.resize(counts["sampler"]);
+    for (size_t i = 0; i < ctx.samplers.size(); ++i) {
+        auto &sampler = ctx.samplers[i];
         auto &jsonImage = input["samplers"][i];
         if (jsonImage.contains("magFilter")) {
             sampler.magFilter = jsonImage["magFilter"];
@@ -234,11 +212,9 @@ void Importer::LoadJSON(const char *filename, Model &model) {
         }
     }
 
-    // TODO: Load images
-    std::vector<gltf::Image> images;
-    images.resize(counts["image"]);
-    for (size_t i = 0; i < images.size(); ++i) {
-        auto &image = images[i];
+    ctx.images.resize(counts["image"]);
+    for (size_t i = 0; i < ctx.images.size(); ++i) {
+        auto &image = ctx.images[i];
         auto &jsonImage = input["images"][i];
         if (jsonImage.contains("uri")) {
             image.uri = decodeUri(jsonImage["uri"]);
@@ -249,26 +225,22 @@ void Importer::LoadJSON(const char *filename, Model &model) {
         }
     }
 
-    model.textures.resize(images.size());
+    model.textures.resize(ctx.images.size());
     for (size_t i = 0; i < model.textures.size(); ++i) {
         auto &texture = model.textures[i];
-        texture.path = images[i].uri.value();
-        if (textures[i].sampler >= 0) {
-            texture.sampler.minFilter = samplers[textures[i].sampler].minFilter;
-            texture.sampler.magFilter = samplers[textures[i].sampler].magFilter;
-            texture.sampler.wrapS = samplers[textures[i].sampler].wrapS;
-            texture.sampler.wrapT = samplers[textures[i].sampler].wrapT;
-            // fmt::print("minFilter: {}\n", texture.sampler.minFilter);
-            // fmt::print("magFilter: {}\n", texture.sampler.magFilter);
-            // fmt::print("wrapS: {}\n", texture.sampler.wrapS);
-            // fmt::print("wrapT: {}\n", texture.sampler.wrapT);
+        texture.path = ctx.images[i].uri.value();
+        if (ctx.textures[i].sampler >= 0) {
+            auto sampler = ctx.samplers[ctx.textures[i].sampler];
+            texture.sampler.minFilter = sampler.minFilter;
+            texture.sampler.magFilter = sampler.magFilter;
+            texture.sampler.wrapS = sampler.wrapS;
+            texture.sampler.wrapT = sampler.wrapT;
         }
     }
 
-
-    std::vector<gltf::Accessor> accessors{counts["accessor"]};
-    for (size_t i = 0; i < accessors.size(); ++i) {
-        auto &accessor = accessors[i];
+    ctx.accessors.resize(counts["accessor"]);
+    for (size_t i = 0; i < ctx.accessors.size(); ++i) {
+        auto &accessor = ctx.accessors[i];
         auto &jsonAccessor = input["accessors"][i];
         accessor.bufferView = jsonAccessor["bufferView"];
         if (jsonAccessor.contains("byteOffset")) {
@@ -312,9 +284,9 @@ void Importer::LoadJSON(const char *filename, Model &model) {
         }
     }
 
-    std::vector<gltf::BufferView> bufferViews{counts["bufferView"]};
-    for (size_t i = 0; i < bufferViews.size(); ++i) {
-        auto &bufferView = bufferViews[i];
+    ctx.bufferViews.resize(counts["bufferView"]);
+    for (size_t i = 0; i < ctx.bufferViews.size(); ++i) {
+        auto &bufferView = ctx.bufferViews[i];
         auto &jsonBufferView = input["bufferViews"][i];
         bufferView.buffer = jsonBufferView["buffer"];
         bufferView.byteOffset = jsonBufferView.value("byteOffset", 0);
@@ -324,15 +296,15 @@ void Importer::LoadJSON(const char *filename, Model &model) {
         }
     }
 
-    std::vector<gltf::Buffer> buffers{counts["buffer"]};
-    for (size_t i = 0; i < buffers.size(); ++i) {
-        auto &buffer = buffers[i];
+    ctx.buffers.resize(counts["buffer"]);
+    for (size_t i = 0; i < ctx.buffers.size(); ++i) {
+        auto &buffer = ctx.buffers[i];
         auto &jsonBuffer = input["buffers"][i];
         std::string uri = jsonBuffer["uri"];
         int comma = uri.find(',');
         if (comma < 0) {
             std::string path = model.directory + uri;
-            fmt::print("{}\n", path);
+            // fmt::print("{}\n", path);
             std::ifstream binFile(path, std::ios::binary);
             buffer.byteLength = jsonBuffer["byteLength"];
             buffer.uri.resize(buffer.byteLength);
@@ -350,105 +322,39 @@ void Importer::LoadJSON(const char *filename, Model &model) {
         }
     }
 
-    // Decide which accessor is for positions and which for indices (Mesh?)
-    // TODO: Remove the repetition in the future.
-    for (size_t i = 0; i < meshes.size(); ++i) {
-        auto &mesh = meshes[i];
+    for (size_t i = 0; i < ctx.meshes.size(); ++i) {
+        auto &mesh = ctx.meshes[i];
         std::vector<int> accessors_;
         for (auto &primitive: mesh.primitives) {
             if (primitive.indices.has_value()) {
-                accessors_.push_back(primitive.indices.value());
+                int idx = primitive.indices.value();
+                LoadModelAttribute<uint16_t>(ctx, model.meshes[i].indices, idx, 1);
             }
             auto &attr = primitive.attributes;
             if (attr.position.has_value()) {
-                accessors_.push_back(attr.position.value());
+                int idx = attr.position.value();
+                LoadModelAttribute<float>(ctx, model.meshes[i].vertices, idx, 3);
             }
             if (attr.normal.has_value()) {
-                accessors_.push_back(attr.normal.value());
             }
             if (attr.texCoord.has_value()) {
-                accessors_.push_back(attr.texCoord.value());
+                int idx = attr.texCoord.value();
+                LoadModelAttribute<float>(ctx, model.meshes[i].texCoords, idx, 2);
             }
             if (attr.color.has_value()) {
-                accessors_.push_back(attr.color.value());
+                int idx = attr.color.value();
+                LoadModelAttribute<float>(ctx, model.meshes[i].colors, idx, 2);
             }
         }
         for (int accIdx : accessors_) {
-            auto &accessor = accessors[accIdx];
-            auto &bufferView = bufferViews[accessor.bufferView.value()];
-            auto &buffer = buffers[bufferView.buffer];
-            // Indices
-            if (accessor.componentType == GL_UNSIGNED_SHORT && accessor.type == "SCALAR") {
-                // GL_UNSIGNED_SHORT
-                size_t count = accessor.count;
-                model.meshes[i].indices.resize(count);
-                auto ptr = (uint16_t *) (buffer.uri.data() + bufferView.byteOffset + accessor.byteOffset);
-                for (size_t j = 0; j < count; ++j) {
-                    model.meshes[i].indices[j] = ptr[j];
-                }
-            }
-            // Skip normals for now
-            if (mesh.primitives[0].attributes.normal.has_value()) {
-                if (mesh.primitives[0].attributes.normal.value() == accIdx) {
-                    continue;
-                }
-            }
-
-            // Vertex colors
-            if (mesh.primitives[0].attributes.color.has_value()) {
-                if (mesh.primitives[0].attributes.color.value() == accIdx) {
-                    size_t stride = bufferView.byteStride ? bufferView.byteStride : sizeof(float) * 3;
-                    size_t jmp = stride / sizeof(float);
-                    model.meshes[i].colors.resize(accessor.count * 3);
-                    auto ptr = (float*)(buffer.uri.data() + bufferView.byteOffset + accessor.byteOffset);
-                    for (size_t j = 0; j < accessor.count; ++j) {
-                        size_t src = j * jmp;
-                        size_t dst = j * 3;
-                        model.meshes[i].colors[dst + 0] = ptr[src + 0];
-                        model.meshes[i].colors[dst + 1] = ptr[src + 1];
-                        model.meshes[i].colors[dst + 2] = ptr[src + 2];
-                    }
-                }
-            }
-
-            // Vertices
-            if (accessor.componentType == GL_FLOAT && accessor.type == "VEC3") {
-                // fmt::print("POSITIONS\n");
-                size_t stride = bufferView.byteStride ? bufferView.byteStride : sizeof(float) * 3;
-                size_t jmp = stride / sizeof(float);
-                model.meshes[i].vertices.resize(accessor.count * 3);
-                auto ptr = (float*)(buffer.uri.data() + bufferView.byteOffset + accessor.byteOffset);
-                for (size_t j = 0; j < accessor.count; ++j) {
-                    size_t src = j * jmp;
-                    size_t dst = j * 3;
-                    model.meshes[i].vertices[dst + 0] = ptr[src + 0];
-                    model.meshes[i].vertices[dst + 1] = ptr[src + 1];
-                    model.meshes[i].vertices[dst + 2] = ptr[src + 2];
-                    // fmt::print("{}, {}, {}\n", ptr[src], ptr[src+1], ptr[src+2]);
-                }
-            }
-            // Texture coordinates
-            else if (accessor.componentType == GL_FLOAT && accessor.type == "VEC2") {
-                // fmt::print("UVS\n");
-                size_t jmp = bufferView.byteStride / sizeof(float);
-                std::vector<float> texCoords;
-                texCoords.resize(accessor.count * 2);
-                // buffer.uri.data() is correct.
-                auto ptr = (float *) (buffer.uri.data() + bufferView.byteOffset + accessor.byteOffset);
-                for (size_t i = 0; i < accessor.count; ++i) {
-                    size_t src = i * jmp;
-                    size_t dst = i * 2;
-                    texCoords[dst + 0] = ptr[src + 0];
-                    texCoords[dst + 1] = ptr[src + 1];
-                    // fmt::print("{}, {}\n", ptr[src], ptr[src+1]);
-                }
-                model.meshes[i].texCoords = std::move(texCoords);
-            }
+            auto &accessor = ctx.accessors[accIdx];
+            auto &bufferView = ctx.bufferViews[accessor.bufferView.value()];
+            auto &buffer = ctx.buffers[bufferView.buffer];
 
             if (accessor.sparse.has_value()) {
                 auto &sparse = accessor.sparse.value();
-                auto &idBufV = bufferViews[sparse.indices.bufferView];
-                auto &vtBufV = bufferViews[sparse.values.bufferView];
+                auto &idBufV = ctx.bufferViews[sparse.indices.bufferView];
+                auto &vtBufV = ctx.bufferViews[sparse.values.bufferView];
 
                 auto idPtr = (uint16_t *) (buffer.uri.data() + idBufV.byteOffset);
                 size_t count = idBufV.byteLength / sizeof(uint16_t);
@@ -478,9 +384,10 @@ void Importer::LoadJSON(const char *filename, Model &model) {
         // FIXME: Currently only one primitive set is assumed
         if (mesh.primitives[0].material.has_value()) {
             int material = mesh.primitives[0].material.value();
-            if (materials[material].pbrMetallicRoughness.baseColorTexture.has_value()) {
-                int texture = materials[material].pbrMetallicRoughness.baseColorTexture.value().index;
-                int source = textures[texture].source;
+            auto baseColor = ctx.materials[material].pbrMetallicRoughness.baseColorTexture;
+            if ((baseColor.has_value())) {
+                int texture = baseColor.value().index;
+                int source = ctx.textures[texture].source;
                 model.meshes[i].materialIndex = source;
             }
         }

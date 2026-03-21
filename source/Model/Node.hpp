@@ -7,6 +7,7 @@
 class Node {
 public:
     int meshIndex = -1;
+    int parentIndex = -1;
     glm::mat4 transform{1.0f};
     std::vector<uint32_t> childrenIndices;
 };

@@ -51,21 +51,20 @@ int main(int argc, char **argv) {
 
     std::vector<std::string> paths = {
         // ASSETS_DIR"models/triangle-sparse/triangle-sparse.gltf",
-        // ASSETS_DIR"models/simple-mesh/scene.gltf",
-        // ASSETS_DIR"models/triangle/scene.gltf",
-        // ASSETS_DIR"models/cube/cube.gltf",
-        // ASSETS_DIR"models/cube-interleaved/scene.gltf",
-        // ASSETS_DIR"models/suzanne/scene.gltf",
-        // ASSETS_DIR"models/avocado/scene.gltf",
-        // ASSETS_DIR"models/material-triangle/scene.gltf",
-        // ASSETS_DIR"models/simple-texture/scene.gltf",
-        // ASSETS_DIR"models/cube-textured/scene.gltf",
+        ASSETS_DIR"models/simple-mesh/scene.gltf",
+        ASSETS_DIR"models/triangle/scene.gltf",
+        ASSETS_DIR"models/cube/cube.gltf",
+        ASSETS_DIR"models/cube-interleaved/scene.gltf",
+        ASSETS_DIR"models/suzanne/scene.gltf",
+        ASSETS_DIR"models/avocado/scene.gltf",
+        ASSETS_DIR"models/material-triangle/scene.gltf",
+        ASSETS_DIR"models/simple-texture/scene.gltf",
+        ASSETS_DIR"models/cube-textured/scene.gltf",
         ASSETS_DIR"models/cube-vertex-colored/scene.gltf",
-        // ASSETS_DIR"models/cube-textured-non-power-of-two/scene.gltf",
-        // ASSETS_DIR"models/cube textured with spaces/scene.gltf",
+        ASSETS_DIR"models/cube-non-smoothed-faces/scene.gltf",
+        ASSETS_DIR"models/cube-textured-non-power-of-two/scene.gltf",
+        ASSETS_DIR"models/cube textured with spaces/scene.gltf",
         // ASSETS_DIR"models/duck/scene.gltf",
-        // ASSETS_DIR"models/skull/scene.gltf",
-        // ASSETS_DIR"models/birthday_cake/scene.gltf",
     };
 
     models.resize(paths.size());
@@ -106,12 +105,16 @@ void Render() {
     shader.use();
     shader.setMat4("view", view);
     shader.setMat4("projection", projection);
-    float start = -(float)models.size() * 2.0f;
+    float time = (float)SDL_GetTicks() / 1000.0f;
+    float start = -(float)models.size();
     for (size_t i = 0; i < models.size(); ++i) {
+        auto &model = models[i];
         auto transform = glm::mat4(1.0f);
-        transform = glm::translate(transform, glm::vec3(start + (float)i * 2.5f, 0.0f, -2.0f));
-        // transform = glm::scale(transform, glm::vec3(10.0f));
-        shader.setMat4("model", transform);
+        transform = glm::translate(transform, glm::vec3(start + (float)(i) * 2.5f, 0.0f, 0.0f));
+        // transform = glm::scale(transform, glm::vec3(0.1f));
+        // float angle = -20.0f * time;
+        // transform = glm::rotate(transform, glm::radians(angle), glm::vec3(0.0f, 1.0f, 0.0f));
+        models[i].SetTransformMatrix(transform);
         models[i].Render(shader);
     }
     glBindVertexArray(0);
@@ -157,7 +160,7 @@ void InitWindow() {
         exit(4);
     }
 
-    // SDL_SetWindowRelativeMouseMode(window, true);
+    SDL_SetWindowRelativeMouseMode(window, true);
 }
 
 void ProcessEvents() {

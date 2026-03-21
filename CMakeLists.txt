@@ -28,6 +28,7 @@ target_include_directories(OpenGL
         PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/stb
         PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/nlohmann
         PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/base64
+        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/gltf
 )
 
 
