@@ -58,6 +58,8 @@ void Importer::LoadJSON(const char *filename, Model &model) {
 
     assert(input["asset"]["version"] == "2.0");
 
+    fmt::print("Loading: {}\n", filename);
+
     std::string directory(filename);
     size_t dir = directory.rfind('/');
     model.directory = directory.substr(0, dir + 1);
@@ -74,6 +76,10 @@ void Importer::LoadJSON(const char *filename, Model &model) {
     counts["texture"] = input["textures"].size();
     counts["image"] = input["images"].size();
     counts["sampler"] = input["samplers"].size();
+
+    for (const auto &pair : counts) {
+        fmt::print("{}: {}\n", pair.first, pair.second);
+    }
 
     ImportCtx ctx{};
 
