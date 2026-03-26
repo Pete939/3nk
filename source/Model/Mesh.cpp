@@ -9,7 +9,7 @@ void Mesh::Render(Shader &shader) {
 }
 
 void Mesh::InitOpenGLBuffers() {
-    uint32_t vbo, vboUV, vboCol, ebo;
+    uint32_t vbo, vboUV, vboCol, vboNor, ebo;
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
 
@@ -38,6 +38,14 @@ void Mesh::InitOpenGLBuffers() {
     else {
         glDisableVertexAttribArray(2);
         glVertexAttrib3f(2, 1.0f, 1.0f, 1.0f); // white
+    }
+
+    if (!normals.empty()) {
+        glGenBuffers(1, &vboNor);
+        glBindBuffer(GL_ARRAY_BUFFER, vboNor);
+        glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(float), normals.data(), GL_STATIC_DRAW);
+        glVertexAttribPointer(3, 3, GL_FLOAT, GL_TRUE, 0, (void*)0);
+        glEnableVertexAttribArray(3);
     }
 
     glGenBuffers(1, &ebo);

@@ -342,6 +342,8 @@ void Importer::LoadJSON(const char *filename, Model &model) {
                 LoadModelAttribute<float>(ctx, model.meshes[i].vertices, idx, 3);
             }
             if (attr.normal.has_value()) {
+                int idx = attr.normal.value();
+                LoadModelAttribute<float>(ctx, model.meshes[i].normals, idx, 3);
             }
             if (attr.texCoord.has_value()) {
                 int idx = attr.texCoord.value();
