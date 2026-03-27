@@ -6,16 +6,15 @@
 #include <vector>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include <stb/stb_image.h>
 
-#include "Camera/Camera.h"
-#include "Texture/Texture.h"
-#include "Shader/Shader.h"
-#include "Model/Importer.h"
-#include "Error/glError.hpp"
-#include "Model/Model.hpp"
+#include "3nk/Camera.h"
+#include "3nk/Texture.h"
+#include "3nk/Shader.h"
+#include "3nk/Importer.h"
+#include "3nk/glError.hpp"
+#include "3nk/Model.hpp"
 
-const char *title = "Basic lighting";
+const char *title = "3nk engine demo";
 int screenWidth = 800;
 int screenHeight = 600;
 SDL_Window *window;

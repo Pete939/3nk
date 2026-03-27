@@ -1,4 +1,4 @@
-#include "Shader.h"
+#include "3nk/Shader.h"
 #include <glad/glad.h>
 #include <iostream>
 #include <fstream>

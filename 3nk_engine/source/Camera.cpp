@@ -1,5 +1,5 @@
 
-#include "Camera.h"
+#include "3nk/Camera.h"
 
 #include <fmt/core.h>
 #include <glm/ext/matrix_transform.hpp>

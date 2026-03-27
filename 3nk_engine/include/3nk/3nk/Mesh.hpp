@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <vector>
 
-#include "../Shader/Shader.h"
+#include "Shader.h"
 
 class Mesh {
 public:

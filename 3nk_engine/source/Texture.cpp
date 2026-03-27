@@ -3,7 +3,7 @@
 #include <fmt/core.h>
 #include <stb/stb_image.h>
 #include <glad/glad.h>
-#include "Texture.h"
+#include "3nk/Texture.h"
 #include <cmath>
 
 void Texture::load(std::string path) {

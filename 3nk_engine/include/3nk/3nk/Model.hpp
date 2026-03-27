@@ -4,7 +4,7 @@
 #include <vector>
 #include "Mesh.hpp"
 #include "Node.hpp"
-#include "../Texture/Texture.h"
+#include "Texture.h"
 
 class Model {
 public:

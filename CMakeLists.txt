@@ -1,36 +1,36 @@
 cmake_minimum_required(VERSION 4.1)
-project(OpenGL)
-
+project(3nk)
 set(CMAKE_CXX_STANDARD 20)
 
-set(ASSETS_DIR "${CMAKE_SOURCE_DIR}/assets/")
+add_library(3nk_engine
+        3nk_engine/source/glad.c
+        3nk_engine/source/Shader.cpp
+        3nk_engine/source/stb_image.c
+        3nk_engine/source/Texture.cpp
+        3nk_engine/source/Camera.cpp
+        3nk_engine/source/Importer.cpp
+        3nk_engine/source/Model.cpp
+        3nk_engine/source/Mesh.cpp
+        3nk_engine/source/Node.cpp
+)
+target_include_directories(3nk_engine
+        PUBLIC 3nk_engine/include/glad
+        PUBLIC 3nk_engine/include/stb
+        PUBLIC 3nk_engine/include/nlohmann
+        PUBLIC 3nk_engine/include/base64
+        PUBLIC 3nk_engine/include/3nk
+)
+find_package(fmt REQUIRED)
+find_package(SDL3 CONFIG REQUIRED)
+target_link_libraries(3nk_engine PUBLIC fmt PUBLIC SDL3::SDL3)
+
+
+
+set(ASSETS_DIR "${CMAKE_SOURCE_DIR}/3nk_testgame/assets/")
 add_compile_definitions(
         ASSETS_DIR="${ASSETS_DIR}"
 )
+add_executable(3nk_testgame 3nk_testgame/Main.cpp)
+target_link_libraries(3nk_testgame PRIVATE 3nk_engine)
 
-find_package(fmt REQUIRED)
-
-add_executable(OpenGL source/Main.cpp
-        source/glad.c
-        source/Shader/Shader.cpp
-        source/stb_image.c
-        source/Texture/Texture.cpp
-        source/Camera/Camera.cpp
-        source/Model/Importer.cpp
-        source/Model/Model.cpp
-        source/Model/Mesh.cpp
-        source/Model/Node.cpp
-        source/Model/Node.hpp
-        source/Model/WhiteTexture.hpp)
-
-target_include_directories(OpenGL
-        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/glad
-        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/stb
-        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/nlohmann
-        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/base64
-        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/gltf
-)
-
-
-find_package(SDL3 CONFIG REQUIRED)
-target_link_libraries(OpenGL PRIVATE fmt PRIVATE SDL3::SDL3)
+#target_link_libraries(OpenGL PRIVATE fmt PRIVATE SDL3::SDL3)

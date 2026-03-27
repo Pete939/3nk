@@ -1,6 +1,6 @@
 
-#include "Model.hpp"
-#include "WhiteTexture.hpp"
+#include "3nk/Model.hpp"
+#include "3nk/WhiteTexture.hpp"
 
 #include <iostream>
 #include <fmt/core.h>
