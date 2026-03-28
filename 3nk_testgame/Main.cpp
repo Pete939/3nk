@@ -7,6 +7,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include "3nk/AssimpImporter.hpp"
 #include "3nk/Camera.h"
 #include "3nk/Texture.h"
 #include "3nk/Shader.h"
@@ -47,6 +48,7 @@ int main(int argc, char **argv) {
 
     InitWindow();
 
+    // glEnable(GL_TEXTURE_2D);
     glEnable(GL_DEPTH_TEST);
 
     lightObjectShader.createShaderProgram(ASSETS_DIR"shaders/LightAffectedObject.vert", ASSETS_DIR"shaders/LightAffectedObject.frag");
@@ -71,8 +73,9 @@ int main(int argc, char **argv) {
     // };
 
     const char* suzannePath = ASSETS_DIR"models/suzanne/scene.gltf";
-    importer.LoadJSON(suzannePath, suzanne);
+    AssimpImport(suzanne, suzannePath);
     suzanne.InitOpenGLBuffers();
+
 
     const char* lightSourcePath = ASSETS_DIR"models/cube/cube.gltf";
     importer.LoadJSON(lightSourcePath, lightSource);
@@ -103,11 +106,12 @@ int main(int argc, char **argv) {
 float aspect = (float) screenWidth / (float) screenHeight;
 
 void Render() {
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     auto projection = glm::perspective(glm::radians(45.0f), aspect, 0.1f, 100.0f);
     auto view = camera.GetMatrix();
     lightObjectShader.use();
+    auto model = glm::mat4(1.0f);
     lightObjectShader.setMat4("view", view);
     lightObjectShader.setMat4("projection", projection);
     lightObjectShader.setVec3("LightColor", glm::vec3(1.0f));
@@ -115,16 +119,14 @@ void Render() {
 
     auto transform = glm::mat4(1.0f);
     glm::vec3 suzannePosition = glm::vec3(0.0f, 0.0f, -3.0f);
+    model = glm::translate(model, suzannePosition);
+    lightObjectShader.setMat4("model", model);
     float radius = 2.0f;
     float x = std::sin(time) * radius;
     float z = std::cos(time) * radius;
     glm::vec3 position = {x, 0.0f, suzannePosition.z + z};
-    transform = glm::translate(transform, suzannePosition);
-
     lightObjectShader.setVec3("LightPos", position);
-    // fmt::print("LightPos: {},{},{}\n", position.x, position.y, position.z);
-    suzanne.SetTransformMatrix(transform);
-    suzanne.Render(lightObjectShader);
+    suzanne.AssimpRender(lightObjectShader);
 
 
     lightSourceShader.use();
@@ -179,7 +181,7 @@ void InitWindow() {
         exit(4);
     }
 
-    SDL_SetWindowRelativeMouseMode(window, true);
+    // SDL_SetWindowRelativeMouseMode(window, true);
 }
 
 void ProcessEvents() {

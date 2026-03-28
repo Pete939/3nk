@@ -22,13 +22,8 @@ void Model::ProcessNode(size_t idx, glm::mat4 transform, Shader &shader) {
     shader.setMat4("model", transform);
     if (node.meshIndex >= 0) {
         auto &mesh = meshes[node.meshIndex];
-        if (mesh.materialIndex >= 0) {
             // TODO: Keep n=0?
-            textures[mesh.materialIndex].use(0);
-        }
-        else {
-            glBindTexture(GL_TEXTURE_2D, GetWhiteTexture());
-        }
+            // glBindTexture(GL_TEXTURE_2D, GetWhiteTexture());
         mesh.Render(shader);
     }
 }
@@ -59,14 +54,40 @@ void Model::Render(Shader &shader) {
     ProcessNode(rootNodeIdx, nodes[rootNodeIdx].transform, shader);
 }
 
+void Model::AssimpNodeRender(size_t idx, glm::mat4 transform, Shader &shader) {
+    auto &node = nodes[idx];
+    if (!node.childrenIndices.empty()) {
+        for (uint32_t index : node.childrenIndices) {
+            // transform = transform * nodes[index].transform;
+            AssimpNodeRender(index, transform, shader);
+        }
+    }
+    // shader.setMat4("model", transform);
+    if (node.meshIndex >= 0) {
+        auto &mesh = meshes[node.meshIndex];
+        if (mesh.materialIndex >= 0) {
+            // TODO: Keep n=0?
+            textures[mesh.materialIndex].use(0);
+        }
+        else {
+            glBindTexture(GL_TEXTURE_2D, GetWhiteTexture());
+        }
+        mesh.Render(shader);
+    }
+}
+
+void Model::AssimpRender(Shader &shader) {
+    AssimpNodeRender(0, glm::mat4{1.0f}, shader);
+}
+
 void Model::InitOpenGLBuffers() {
     for (auto & mesh : meshes) {
         mesh.InitOpenGLBuffers();
-        if (mesh.materialIndex >= 0) {
-            std::string path = directory + textures[mesh.materialIndex].path;
-            textures[mesh.materialIndex].load(path);
-        }
+        // if (mesh.materialIndex >= 0) {
+            // std::string path = directory + textures[mesh.materialIndex].path;
+            // textures[mesh.materialIndex].load(path);
+        // }
     }
-    AddRootNode();
+    // AddRootNode();
 }
 

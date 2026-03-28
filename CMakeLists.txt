@@ -12,6 +12,7 @@ add_library(3nk_engine
         3nk_engine/source/Model.cpp
         3nk_engine/source/Mesh.cpp
         3nk_engine/source/Node.cpp
+        3nk_engine/source/AssimpImporter.cpp
 )
 target_include_directories(3nk_engine
         PUBLIC 3nk_engine/include/glad
@@ -22,9 +23,8 @@ target_include_directories(3nk_engine
 )
 find_package(fmt REQUIRED)
 find_package(SDL3 CONFIG REQUIRED)
-target_link_libraries(3nk_engine PUBLIC fmt PUBLIC SDL3::SDL3)
-
-
+find_package(assimp CONFIG REQUIRED)
+target_link_libraries(3nk_engine PUBLIC fmt PUBLIC SDL3::SDL3 PUBLIC assimp::assimp)
 
 set(ASSETS_DIR "${CMAKE_SOURCE_DIR}/3nk_testgame/assets/")
 add_compile_definitions(
