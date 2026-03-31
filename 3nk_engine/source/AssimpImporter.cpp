@@ -13,6 +13,17 @@ void CountNodes(aiNode* node, uint32_t *count) {
     }
 }
 
+bool IsTextureAlreadyLoaded(const Model &model, const std::string &path) {
+    for (auto &texture : model.textures) {
+        if (!texture.path.empty()) {
+            if (std::strcmp(texture.path.c_str(), path.c_str()) == 0) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 void ProcessMesh(Mesh &pMesh, aiMesh *pAiMesh, const aiScene *scene, Model &model) {
     if (pAiMesh->HasPositions()) {
         constexpr size_t VERTEX_COMPONENT_COUNT = 3;
@@ -68,12 +79,14 @@ void ProcessMesh(Mesh &pMesh, aiMesh *pAiMesh, const aiScene *scene, Model &mode
     // Assume always material to be present?
     if (pAiMesh->mMaterialIndex >= 0) {
         aiMaterial *mat = scene->mMaterials[pAiMesh->mMaterialIndex];
-        aiColor3D baseColor{0.0f, 0.0f, 0.0f};
         aiString str;
         mat->GetTexture(aiTextureType_BASE_COLOR, 0, &str);
-        model.textures[0].load(model.directory + std::string(str.C_Str()));
+        std::string path = model.directory + std::string(str.C_Str());
+        if (!IsTextureAlreadyLoaded(model, path)) {
+            model.textures[0].load(path);
+            fmt::print("texture path: {}\n", str.C_Str());
+        }
         pMesh.materialIndex = pAiMesh->mMaterialIndex;
-        fmt::print("texture path: {}\n", str.C_Str());
         // constexpr int ASSIMP_MAX_TEXTURE_TYPES = 27;
         // fmt::print("TEXTURE TYPE COUNTS\n");
         // for (size_t i = 0; i <= ASSIMP_MAX_TEXTURE_TYPES; ++i) {
@@ -156,5 +169,4 @@ void AssimpImport(Model &model, const std::string &filename) {
             mat->Get(AI_MATKEY_NAME,name);
         }
     }
-
 }
