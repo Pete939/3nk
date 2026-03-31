@@ -16,6 +16,8 @@ void Texture::load(std::string path) {
         exit(1);
     }
 
+    this->path = path;
+
     uint32_t texture;
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture);
