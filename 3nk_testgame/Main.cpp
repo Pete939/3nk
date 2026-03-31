@@ -117,7 +117,6 @@ void Render() {
     lightObjectShader.setVec3("LightColor", glm::vec3(1.0f));
     float time = (float)SDL_GetTicks() / 1000.0f;
 
-    auto transform = glm::mat4(1.0f);
     glm::vec3 suzannePosition = glm::vec3(0.0f, 0.0f, -3.0f);
     model = glm::translate(model, suzannePosition);
     lightObjectShader.setMat4("model", model);
@@ -132,7 +131,7 @@ void Render() {
     lightSourceShader.use();
     lightSourceShader.setMat4("view", view);
     lightSourceShader.setMat4("projection", projection);
-    transform = glm::mat4(1.0f);
+    auto transform = glm::mat4(1.0f);
     transform = glm::translate(transform, position);
     transform = glm::scale(transform, glm::vec3(0.2f));
     lightSource.SetTransformMatrix(transform);
