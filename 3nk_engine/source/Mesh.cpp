@@ -1,5 +1,10 @@
 #include "3nk/Mesh.hpp"
 
+#include <iostream>
+
+#include "3nk/glError.hpp"
+
+
 Mesh::Mesh()  {}
 
 void Mesh::Render(Shader &shader) {
@@ -9,7 +14,7 @@ void Mesh::Render(Shader &shader) {
 }
 
 void Mesh::InitOpenGLBuffers() {
-    uint32_t vbo, vboUV, vboCol, vboNor, ebo;
+    uint32_t vbo, vboUV, vboCol, vboNor, vboBone, ebo;
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
 
@@ -48,6 +53,17 @@ void Mesh::InitOpenGLBuffers() {
         glEnableVertexAttribArray(3);
     }
 
+    if (!vertexToBones.empty()) {
+        glGenBuffers(1, &vboBone);
+        glBindBuffer(GL_ARRAY_BUFFER, vboBone);
+        glBufferData(GL_ARRAY_BUFFER, vertexToBones.size() * sizeof(VertexToBone), vertexToBones.data(), GL_STATIC_DRAW);
+        glVertexAttribIPointer(4, 4, GL_INT, sizeof(VertexToBone), (void*)0);
+        glEnableVertexAttribArray(4);
+
+        glVertexAttribPointer(5, 4, GL_FLOAT, GL_TRUE,  sizeof(VertexToBone), (void*)(4 * sizeof(int32_t)));
+        glEnableVertexAttribArray(5);
+    }
+
     glGenBuffers(1, &ebo);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint16_t), indices.data(), GL_STATIC_DRAW);
@@ -57,7 +73,4 @@ void Mesh::InitOpenGLBuffers() {
     glBindVertexArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
-
-    // glCheckError();
 }

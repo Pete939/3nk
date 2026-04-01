@@ -1,3 +1,4 @@
+#include <unordered_map>
 #include <3nk/AssimpImporter.hpp>
 #include <assimp/Importer.hpp>      // C++ importer interface
 #include <assimp/scene.h>           // Output data structure
@@ -24,6 +25,7 @@ bool IsTextureAlreadyLoaded(const Model &model, const std::string &path) {
     return false;
 }
 
+// TODO: Process bones
 void ProcessMesh(Mesh &pMesh, aiMesh *pAiMesh, const aiScene *scene, Model &model) {
     if (pAiMesh->HasPositions()) {
         constexpr size_t VERTEX_COMPONENT_COUNT = 3;
@@ -91,6 +93,32 @@ void ProcessMesh(Mesh &pMesh, aiMesh *pAiMesh, const aiScene *scene, Model &mode
         // fmt::print("TEXTURE TYPE COUNTS\n");
         // for (size_t i = 0; i <= ASSIMP_MAX_TEXTURE_TYPES; ++i) {
             // fmt::print("type {} count: {}\n", i, mat->GetTextureCount(aiTextureType(i)));
+        // }
+    }
+
+    if (pAiMesh->HasBones()) {
+        std::vector<int> vertexBoneCount; // Temporary vector that stores how many bones have been discovered per vertex
+        vertexBoneCount.resize(pAiMesh->mNumVertices, 0);
+        pMesh.vertexToBones.resize(pAiMesh->mNumVertices);
+        for (size_t i = 0; i < pAiMesh->mNumBones; ++i) {
+            aiBone *bone = pAiMesh->mBones[i];
+            // if (!bone->mName.Empty()) {
+                // fmt::print("Bone {} name: {}\n", i, bone->mName.data);
+            // }
+            for (size_t j = 0; j < bone->mNumWeights; ++j) {
+                aiVertexWeight weight = bone->mWeights[j];
+                uint32_t idx = vertexBoneCount[weight.mVertexId]++;
+                pMesh.vertexToBones[weight.mVertexId].boneIds[idx] = i;
+                pMesh.vertexToBones[weight.mVertexId].weights[idx] = weight.mWeight;
+                // fmt::print("\tWeight {}: vertexId: {}, Weight: {}\n", j, weight.mVertexId, weight.mWeight);
+            }
+        }
+        // for (size_t i = 0; i < pAiMesh->mNumVertices; ++i) {
+        //     auto vtb = pMesh.vertexToBones[i];
+        //     fmt::print("Vertex {} bones:\n", i);
+        //     for (size_t j = 0; j < 4 /*and vtb.boneIds[j] != -1*/; ++j) {
+        //         fmt::print("\tid: {}\tweight: {}\n", vtb.boneIds[j], vtb.weights[j]);
+        //     }
         // }
     }
 }
