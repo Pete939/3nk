@@ -82,6 +82,8 @@ int Shader::CompileShader(const char *source, GLenum type) {
             snprintf(shaderType, 16, "FRAGMENT");
         }
         glGetShaderInfoLog(shader, 512, NULL, errorLog);
+        fmt::print("ERROR::SHADER::PROGRAM::COMPILATION_FAILED: {}\n", errorLog);
+        exit(100);
         return -1;
     }
 
@@ -98,9 +100,10 @@ int Shader::LinkShader(int vertexShader, int fragmentShader) {
     char errorLog[512];
     glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
     if (!success) {
-    glGetProgramInfoLog(shaderProgram, 512, NULL, errorLog);
-    printf("ERROR::SHADER::PROGRAM::LINKING_FAILED: %s\n", errorLog);
-    return -1;
+        glGetProgramInfoLog(shaderProgram, 512, NULL, errorLog);
+        fmt::print("ERROR::SHADER::PROGRAM::LINKING_FAILED: {}\n", errorLog);
+        exit(101);
+        return -1;
     }
     return shaderProgram;
 }
