@@ -9,13 +9,11 @@
 
 #include "3nk/AssimpImporter.hpp"
 #include "3nk/Camera.h"
-#include "3nk/Texture.h"
 #include "3nk/Shader.h"
 #include "3nk/Importer.h"
-#include "3nk/glError.hpp"
 #include "3nk/Model.hpp"
 
-const char *title = "3nk engine demo";
+const char *title = "3nk engine demo - skinning";
 int screenWidth = 800;
 int screenHeight = 600;
 SDL_Window *window;
@@ -23,16 +21,16 @@ SDL_GLContext context;
 float proportion = 0.5f;
 bool running = true;
 bool wireframeMode = false;
+bool boneRender = false;
 uint32_t targetFrameTime = 16; // 16ms ~ 60fps
 uint64_t frameStart;
 SDL_Event event;
 
-Shader lightObjectShader;
-Shader lightSourceShader;
+int selectedBoneId = 0;
+Shader skinnedModelShader;
 Camera camera;
 Importer importer;
-Model suzanne;
-Model lightSource;
+Model skinnedModel;
 
 void InitWindow();
 
@@ -48,39 +46,15 @@ int main(int argc, char **argv) {
 
     InitWindow();
 
-    // glEnable(GL_TEXTURE_2D);
     glEnable(GL_DEPTH_TEST);
 
-    lightObjectShader.createShaderProgram(ASSETS_DIR"shaders/LightAffectedObject.vert", ASSETS_DIR"shaders/LightAffectedObject.frag");
-    lightSourceShader.createShaderProgram(ASSETS_DIR"shaders/BasicLightSource.vert", ASSETS_DIR"shaders/BasicLightSource.frag");
+    std::string vertexShaderPath = ASSETS_DIR"shaders/SkinnedObject.vert";
+    std::string fragmentShaderPath= ASSETS_DIR"shaders/SkinnedObjectVisualizeBones.frag";
+    skinnedModelShader.createShaderProgram(vertexShaderPath.c_str(), fragmentShaderPath.c_str());
 
-    // std::vector<std::string> paths = {
-    //     // ASSETS_DIR"models/triangle-sparse/triangle-sparse.gltf",
-    //     ASSETS_DIR"models/simple-mesh/scene.gltf",
-    //     ASSETS_DIR"models/triangle/scene.gltf",
-    //     ASSETS_DIR"models/cube/cube.gltf",
-    //     ASSETS_DIR"models/cube-interleaved/scene.gltf",
-    //     ASSETS_DIR"models/suzanne/scene.gltf",
-    //     ASSETS_DIR"models/avocado/scene.gltf",
-    //     ASSETS_DIR"models/material-triangle/scene.gltf",
-    //     ASSETS_DIR"models/simple-texture/scene.gltf",
-    //     ASSETS_DIR"models/cube-textured/scene.gltf",
-    //     ASSETS_DIR"models/cube-vertex-colored/scene.gltf",
-    //     ASSETS_DIR"models/cube-non-smoothed-faces/scene.gltf",
-    //     ASSETS_DIR"models/cube-textured-non-power-of-two/scene.gltf",
-    //     ASSETS_DIR"models/cube textured with spaces/scene.gltf",
-    //     // ASSETS_DIR"models/duck/scene.gltf",
-    // };
-
-    const char* suzannePath = ASSETS_DIR"models/suzanne/scene.gltf";
-    AssimpImport(suzanne, suzannePath);
-    suzanne.InitOpenGLBuffers();
-
-
-    const char* lightSourcePath = ASSETS_DIR"models/cube/cube.gltf";
-    importer.LoadJSON(lightSourcePath, lightSource);
-    lightSource.InitOpenGLBuffers();
-
+    const char* suzannePath = ASSETS_DIR"models/cesium-man/scene.gltf";
+    AssimpImport(skinnedModel, suzannePath);
+    skinnedModel.InitOpenGLBuffers();
 
     float deltaTime = 0.0f;
     float lastFrame = 0.0f;
@@ -106,37 +80,27 @@ int main(int argc, char **argv) {
 float aspect = (float) screenWidth / (float) screenHeight;
 
 void Render() {
+    // float time = (float)SDL_GetTicks() / 1000.0f;
+
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
     auto projection = glm::perspective(glm::radians(45.0f), aspect, 0.1f, 100.0f);
     auto view = camera.GetMatrix();
-    lightObjectShader.use();
     auto model = glm::mat4(1.0f);
-    lightObjectShader.setMat4("view", view);
-    lightObjectShader.setMat4("projection", projection);
-    lightObjectShader.setVec3("LightColor", glm::vec3(1.0f));
-    float time = (float)SDL_GetTicks() / 1000.0f;
+    glm::vec3 position = glm::vec3(0.0f, -0.5f, -1.0f);
+    model = glm::translate(model, position);
+    model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(0, 1, 0));
+    model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1, 0, 0));
 
-    glm::vec3 suzannePosition = glm::vec3(0.0f, 0.0f, -3.0f);
-    model = glm::translate(model, suzannePosition);
-    lightObjectShader.setMat4("model", model);
-    float radius = 2.0f;
-    float x = std::sin(time) * radius;
-    float z = std::cos(time) * radius;
-    glm::vec3 position = {x, 0.0f, suzannePosition.z + z};
-    lightObjectShader.setVec3("LightPos", position);
-    suzanne.AssimpRender(lightObjectShader);
+    skinnedModelShader.use();
+    skinnedModelShader.setMat4("model", model);
+    skinnedModelShader.setMat4("view", view);
+    skinnedModelShader.setMat4("projection", projection);
+    skinnedModelShader.setInt("selectedBoneId", selectedBoneId);
+    skinnedModelShader.setBool("boneRender", boneRender);
 
-
-    lightSourceShader.use();
-    lightSourceShader.setMat4("view", view);
-    lightSourceShader.setMat4("projection", projection);
-    auto transform = glm::mat4(1.0f);
-    transform = glm::translate(transform, position);
-    transform = glm::scale(transform, glm::vec3(0.2f));
-    lightSource.SetTransformMatrix(transform);
-    lightSource.Render(lightSourceShader);
-
+    skinnedModel.AssimpRender(skinnedModelShader);
     glBindVertexArray(0);
     SDL_GL_SwapWindow(window);
 }
@@ -180,8 +144,9 @@ void InitWindow() {
         exit(4);
     }
 
-    // SDL_SetWindowRelativeMouseMode(window, true);
+    SDL_SetWindowRelativeMouseMode(window, true);
 }
+
 
 void ProcessEvents() {
     while (SDL_PollEvent(&event)) {
@@ -199,6 +164,14 @@ void ProcessEvents() {
                 if (wireframeMode) {
                     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
                 }
+            }
+            // Switch between bones
+            if (event.key.scancode == SDL_SCANCODE_SPACE and boneRender) {
+                selectedBoneId = (selectedBoneId + 1) % skinnedModel.numBones;
+            }
+
+            if (event.key.scancode == SDL_SCANCODE_B) {
+                boneRender = !boneRender;
             }
         }
     }
