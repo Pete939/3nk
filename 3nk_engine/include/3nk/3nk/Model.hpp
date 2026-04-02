@@ -18,6 +18,7 @@ public:
     std::vector<Node> nodes;
     std::vector<Mesh> meshes;
     std::vector<Texture> textures;
+    int numBones = 0;
 private:
     void AssimpNodeRender(size_t idx, glm::mat4 transform, Shader &shader);
     void AddRootNode();

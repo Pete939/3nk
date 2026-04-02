@@ -25,7 +25,6 @@ bool IsTextureAlreadyLoaded(const Model &model, const std::string &path) {
     return false;
 }
 
-// TODO: Process bones
 void ProcessMesh(Mesh &pMesh, aiMesh *pAiMesh, const aiScene *scene, Model &model) {
     if (pAiMesh->HasPositions()) {
         constexpr size_t VERTEX_COMPONENT_COUNT = 3;
@@ -100,6 +99,7 @@ void ProcessMesh(Mesh &pMesh, aiMesh *pAiMesh, const aiScene *scene, Model &mode
         std::vector<int> vertexBoneCount; // Temporary vector that stores how many bones have been discovered per vertex
         vertexBoneCount.resize(pAiMesh->mNumVertices, 0);
         pMesh.vertexToBones.resize(pAiMesh->mNumVertices);
+        model.numBones += pAiMesh->mNumBones;
         for (size_t i = 0; i < pAiMesh->mNumBones; ++i) {
             aiBone *bone = pAiMesh->mBones[i];
             // if (!bone->mName.Empty()) {
@@ -189,6 +189,8 @@ void AssimpImport(Model &model, const std::string &filename) {
         auto &modelMesh = model.meshes[i];
         ProcessMesh(modelMesh, mesh, scene, model);
     }
+
+    fmt::print("bones: {}\n", model.numBones);
 
     if (scene->mNumMaterials > 0) {
         for (size_t i = 0; i < scene->mNumMaterials; ++i) {
