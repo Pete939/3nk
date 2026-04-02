@@ -25,6 +25,9 @@ void main() {
 void BoneDebugRender() {
     bool found = false;
     for (int i = 0; i < 4; ++i) {
+        if (BoneIds[i] == -1) {
+            break;
+        }
         if (BoneIds[i] == selectedBoneId) {
             if (Weights[i] >= 0.7f) {
             FragColor = vec4(1.0f, 0.0f, 0.0f, 0.0f) * Weights[i];
