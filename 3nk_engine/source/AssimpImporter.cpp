@@ -6,6 +6,8 @@
 #include <assimp/material.h>     // Post-processing flags
 #include <fmt/core.h>
 
+#include <3nk/AssimpToGLM.hpp>
+
 void CountNodes(aiNode* node, uint32_t *count) {
     for (size_t i = 0; i < node->mNumChildren; ++i) {
         aiNode *child = node->mChildren[i];
@@ -25,7 +27,8 @@ bool IsTextureAlreadyLoaded(const Model &model, const std::string &path) {
     return false;
 }
 
-void ProcessMesh(Mesh &pMesh, aiMesh *pAiMesh, const aiScene *scene, Model &model) {
+    ;
+void ProcessMesh(Mesh &pMesh, aiMesh *pAiMesh, const aiScene *scene, Model &model, std::unordered_map<std::string, int> &boneMap) {
     if (pAiMesh->HasPositions()) {
         constexpr size_t VERTEX_COMPONENT_COUNT = 3;
         // Process Vertices
@@ -82,11 +85,14 @@ void ProcessMesh(Mesh &pMesh, aiMesh *pAiMesh, const aiScene *scene, Model &mode
         aiMaterial *mat = scene->mMaterials[pAiMesh->mMaterialIndex];
         aiString str;
         mat->GetTexture(aiTextureType_BASE_COLOR, 0, &str);
-        std::string path = model.directory + std::string(str.C_Str());
-        if (!IsTextureAlreadyLoaded(model, path)) {
-            model.textures[0].load(path);
-            fmt::print("texture path: {}\n", str.C_Str());
+        if (mat->GetTextureCount(aiTextureType_BASE_COLOR) != 0) {
+            std::string path = model.directory + std::string(str.C_Str());
+            if (!IsTextureAlreadyLoaded(model, path)) {
+                model.textures[0].load(path);
+                fmt::print("texture path: {}\n", str.C_Str());
+            }
         }
+
         pMesh.materialIndex = pAiMesh->mMaterialIndex;
         // constexpr int ASSIMP_MAX_TEXTURE_TYPES = 27;
         // fmt::print("TEXTURE TYPE COUNTS\n");
@@ -99,9 +105,28 @@ void ProcessMesh(Mesh &pMesh, aiMesh *pAiMesh, const aiScene *scene, Model &mode
         std::vector<int> vertexBoneCount; // Temporary vector that stores how many bones have been discovered per vertex
         vertexBoneCount.resize(pAiMesh->mNumVertices, 0);
         pMesh.vertexToBones.resize(pAiMesh->mNumVertices);
-        model.numBones += pAiMesh->mNumBones;
+        fmt::print("\t\tmNumBones: {}\n", pAiMesh->mNumBones);
+        fmt::print("\t\tBones:\n");
         for (size_t i = 0; i < pAiMesh->mNumBones; ++i) {
             aiBone *bone = pAiMesh->mBones[i];
+            fmt::print("\t\t\tbone {}: {}\n", i, bone->mName.C_Str());
+            // fmt::print("\t\t\t\tname: {}\n", bone->mName.C_Str());
+            BoneInfo bi{};
+
+            bi.mOffsetMatrix = AssimpToGLM::ConvertMatrixToGLMFormat(bone->mOffsetMatrix);
+            model.boneInfos.push_back(bi);
+
+
+            std::string boneName(bone->mName.C_Str());
+
+            if (!boneMap.contains(boneName)) {
+                boneMap[boneName] = model.numBones;
+                model.numBones++;
+            }
+            else {
+                fmt::print(stderr, "some facing repeat i dont know\n");
+                assert(0);
+            }
             // if (!bone->mName.Empty()) {
                 // fmt::print("Bone {} name: {}\n", i, bone->mName.data);
             // }
@@ -113,42 +138,102 @@ void ProcessMesh(Mesh &pMesh, aiMesh *pAiMesh, const aiScene *scene, Model &mode
                 // fmt::print("\tWeight {}: vertexId: {}, Weight: {}\n", j, weight.mVertexId, weight.mWeight);
             }
         }
-        // for (size_t i = 0; i < pAiMesh->mNumVertices; ++i) {
-        //     auto vtb = pMesh.vertexToBones[i];
-        //     fmt::print("Vertex {} bones:\n", i);
-        //     for (size_t j = 0; j < 4 /*and vtb.boneIds[j] != -1*/; ++j) {
-        //         fmt::print("\tid: {}\tweight: {}\n", vtb.boneIds[j], vtb.weights[j]);
-        //     }
-        // }
     }
 }
 
-void ProcessNode(uint32_t currentNodeIndex, aiNode *pAiNode, Model &model) {
+void ProcessNode(uint32_t currentNodeIndex, aiNode *pAiNode, Model &model, int *pCurrentIndex) {
 
+    currentNodeIndex = *pCurrentIndex;
     assert(model.nodes.size() > currentNodeIndex);
-
     auto &modelNode = model.nodes[currentNodeIndex];
 
+    assert(pAiNode->mName.C_Str() != nullptr);
+    modelNode.name = std::string(pAiNode->mName.C_Str());
+    fmt::print("\tnode {}: {}\n", currentNodeIndex, modelNode.name);
+
+    assert(pAiNode->mNumMeshes <= 1);
     for (size_t i = 0; i < pAiNode->mNumMeshes; ++i) {
         uint32_t meshIdx = pAiNode->mMeshes[i];
         modelNode.meshIndex = meshIdx;
+        fmt::print("\t\tmesh index: {}\n", meshIdx);
     }
 
-    // TODO: Set transform matrix
-    // modelNode.transform = pAiNode->mTransformation;
+    modelNode.transform = AssimpToGLM::ConvertMatrixToGLMFormat(pAiNode->mTransformation);
 
     // Process node's children
+    int nodeIndex = currentNodeIndex;
     if (pAiNode->mNumChildren > 0) {
         modelNode.childrenIndices.resize(pAiNode->mNumChildren);
         for (size_t i = 0; i < pAiNode->mNumChildren; ++i) {
-            modelNode.childrenIndices[i] = ++currentNodeIndex;
-            ProcessNode(currentNodeIndex, pAiNode->mChildren[i], model);
+            modelNode.childrenIndices[i] = ++(*pCurrentIndex);
+            ProcessNode(currentNodeIndex, pAiNode->mChildren[i], model, pCurrentIndex);
         }
+        // fmt::print("\tnode {} child indices:", nodeIndex);
+        // for (size_t i = 0; i < pAiNode->mNumChildren; ++i) {
+        //     fmt::print(" {}", modelNode.childrenIndices[i]);
+        // }
+        // fmt::print("\n");
     }
 
 }
 
-// TODO: Support textures
+void ProcessAnimations(Model &model, const aiScene *scene) {
+    fmt::print("mNumAnimations: {}\n", scene->mNumAnimations);
+    uint32_t animationNodesCount = 0;
+    std::unordered_map<std::string, int> animationMap;
+    assert(scene->mNumAnimations == 1);
+    for (size_t i = 0; i < scene->mNumAnimations; ++i) {
+        aiAnimation *animation = scene->mAnimations[i];
+        fmt::print("DURATION IN TICKS: {}\n", animation->mDuration);
+        fmt::print("TICKS PER SECOND: {}\n", animation->mTicksPerSecond);
+        model.animDuration = animation->mDuration / animation->mTicksPerSecond;
+        fmt::print("mNumChannels {}\n", animation->mNumChannels);
+        model.animationNodes.resize(animation->mNumChannels);
+        for (int j = 0; j < animation->mNumChannels; ++j) {
+            aiNodeAnim *nodeAnim = animation->mChannels[j];
+
+            std::string animNodeName(nodeAnim->mNodeName.C_Str());
+            animationMap[animNodeName] = animationNodesCount++;
+
+            fmt::print("animNode {}: {}\n", animationNodesCount - 1, nodeAnim->mNodeName.C_Str());
+            model.animationNodes[j].positionKeys.resize(nodeAnim->mNumPositionKeys);
+            // fmt::print("\tmNumPositionKeys: {}\n", nodeAnim->mNumPositionKeys);
+            for (size_t k = 0; k < nodeAnim->mNumPositionKeys; ++k) {
+                aiVectorKey key = nodeAnim->mPositionKeys[k];
+                model.animationNodes[j].positionKeys[k].position.x = key.mValue.x;
+                model.animationNodes[j].positionKeys[k].position.y = key.mValue.y;
+                model.animationNodes[j].positionKeys[k].position.z = key.mValue.z;
+                model.animationNodes[j].positionKeys[k].timeStamp = key.mTime;
+                // fmt::print("\t\tpositionKey {} time: {}\n", k, key.mTime);
+            }
+            // fmt::print("\tmNumScalingKeys {}\n", nodeAnim->mNumScalingKeys);
+            model.animationNodes[j].scalingKeys.resize(nodeAnim->mNumScalingKeys);
+            for (size_t k = 0; k < nodeAnim->mNumScalingKeys; ++k) {
+                aiVectorKey key = nodeAnim->mScalingKeys[k];
+                model.animationNodes[j].scalingKeys[k].scale.x = key.mValue.x;
+                model.animationNodes[j].scalingKeys[k].scale.y = key.mValue.y;
+                model.animationNodes[j].scalingKeys[k].scale.z = key.mValue.z;
+                model.animationNodes[j].scalingKeys[k].timeStamp = key.mTime;
+                // fmt::print("\t\tpositionKey {} time: {}\n", k, key.mTime);
+            }
+            // fmt::print("\tmNumRotationKeys: {}\n", nodeAnim->mNumRotationKeys);
+            model.animationNodes[j].rotationKeys.resize(nodeAnim->mNumRotationKeys);
+            for (size_t k = 0; k < nodeAnim->mNumRotationKeys; ++k) {
+                aiQuatKey key = nodeAnim->mRotationKeys[k];
+                model.animationNodes[j].rotationKeys[k].rotation = AssimpToGLM::GetGLMQuat(key.mValue);
+                model.animationNodes[j].rotationKeys[k].timeStamp = key.mTime;
+                // fmt::print("\t\tpositionKey {} time: {}\n", k, key.mTime);
+            }
+        }
+    }
+
+    for (auto &node: model.nodes) {
+        if (!node.name.empty() and animationMap.contains(node.name)) {
+            node.animNodeIndex = animationMap[node.name];
+        }
+    }
+}
+
 void AssimpImport(Model &model, const std::string &filename) {
     // Create an instance of the Importer class
     auto importer = Assimp::Importer{};
@@ -181,22 +266,47 @@ void AssimpImport(Model &model, const std::string &filename) {
     CountNodes(scene->mRootNode, &count);
     fmt::print("NODE COUNT: {}\n", count);
     model.nodes.resize(count);
-    ProcessNode(0, scene->mRootNode, model);
+    fmt::print("Node hierarchy\n");
+    int index = 0;
+    ProcessNode(0, scene->mRootNode, model, &index);
 
-    // Mesh process
+    // Count bones
+    int totalBones = 0;
     for (size_t i = 0; i < scene->mNumMeshes; ++i) {
         aiMesh *mesh = scene->mMeshes[i];
+        totalBones += mesh->mNumBones;
+    }
+    model.boneInfos.reserve(totalBones);
+
+    std::unordered_map<std::string, int> boneMap;
+
+    // Mesh process
+    fmt::print("Meshes\n");
+    for (size_t i = 0; i < scene->mNumMeshes; ++i) {
+        fmt::print("\tMesh {}\n", i);
+        aiMesh *mesh = scene->mMeshes[i];
         auto &modelMesh = model.meshes[i];
-        ProcessMesh(modelMesh, mesh, scene, model);
+        ProcessMesh(modelMesh, mesh, scene, model, boneMap);
     }
 
-    fmt::print("bones: {}\n", model.numBones);
-
-    if (scene->mNumMaterials > 0) {
-        for (size_t i = 0; i < scene->mNumMaterials; ++i) {
-            aiMaterial *mat = scene->mMaterials[i];
-            aiString name;
-            mat->Get(AI_MATKEY_NAME,name);
+    // TODO: Link nodes to bones
+    for (auto &node: model.nodes) {
+        if (!node.name.empty() and boneMap.contains(node.name)) {
+            node.boneIndex = boneMap[node.name];
         }
+    }
+
+    // assert(model.boneInfos.capacity() == 2);
+
+    model.globalInverseTransform = glm::inverse(model.nodes[0].transform);
+
+    if (scene->HasAnimations()) {
+        fmt::print("Animations\n");
+        ProcessAnimations(model, scene);
+    }
+
+    int amount = 0;
+    for (auto &node : model.nodes) {
+        fmt::print("node {}: {}\n", amount++, node.animNodeIndex);
     }
 }

@@ -2,14 +2,18 @@
 #pragma once
 #include <glm/glm.hpp>
 #include <cstdint>
+#include <string>
 #include <vector>
 
 class Node {
 public:
     int meshIndex = -1;
     int parentIndex = -1;
+    int boneIndex = -1;
+    int animNodeIndex = -1;
     glm::mat4 transform{1.0f};
     std::vector<uint32_t> childrenIndices;
+    std::string name;
 };
 
 // https://github.khronos.org/glTF-Tutorials/gltfTutorial/gltfTutorial_004_ScenesNodes.html

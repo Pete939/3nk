@@ -12,6 +12,7 @@ void Texture::load(std::string path) {
     uint8_t *data = stbi_load(path.c_str(), &width,
         &height, &nrChannels, 0);
     if (!data) {
+        assert(0);
         std::cerr << fmt::format("Failed to load texture: {}\n", path);
         exit(1);
     }

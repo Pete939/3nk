@@ -84,7 +84,7 @@ void TestScene::Init() {
         exit(4);
     }
 
-    // SDL_SetWindowRelativeMouseMode(window, true);
+    SDL_SetWindowRelativeMouseMode(window, true);
 
     glEnable(GL_DEPTH_TEST);
 
@@ -92,32 +92,32 @@ void TestScene::Init() {
     std::string fragmentShaderPath= ASSETS_DIR"shaders/SkinnedObjectVisualizeBones.frag";
     skinnedModelShader.createShaderProgram(vertexShaderPath.c_str(), fragmentShaderPath.c_str());
 
+    // const char* path = ASSETS_DIR"models/simple-skin/scene.gltf";
+    // const char* path = ASSETS_DIR"models/rigged-simple/scene.gltf";
     const char* path = ASSETS_DIR"models/cesium-man/scene.gltf";
+    // const char* path = ASSETS_DIR"models/rigged-figure/scene.gltf";
     AssimpImport(skinnedModel, path);
     skinnedModel.InitOpenGLBuffers();
 }
 
 void TestScene::Render() {
-    // float time = (float)SDL_GetTicks() / 1000.0f;
-    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+    float r = 0.5f;
+    float g = 0.5f;
+    float b = 0.5f;
+    glClearColor(r, g, b, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     float aspect = this->screenWidth / this->screenHeight;
     auto projection = glm::perspective(glm::radians(45.0f), aspect, 0.1f, 100.0f);
     auto view = camera.GetMatrix();
-    auto model = glm::mat4(1.0f);
-    glm::vec3 position = glm::vec3(0.0f, -0.5f, -1.0f);
-    model = glm::translate(model, position);
-    model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(0, 1, 0));
-    model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1, 0, 0));
+    // TODO: Add utility to transform entire model
 
     skinnedModelShader.use();
-    skinnedModelShader.setMat4("model", model);
     skinnedModelShader.setMat4("view", view);
     skinnedModelShader.setMat4("projection", projection);
     skinnedModelShader.setInt("selectedBoneId", selectedBoneId);
     skinnedModelShader.setBool("boneRender", boneRender);
 
-    skinnedModel.AssimpRender(skinnedModelShader);
+    skinnedModel.AssimpRender(skinnedModelShader, this->dt, false);
     glBindVertexArray(0);
     SDL_GL_SwapWindow(window);
 }
