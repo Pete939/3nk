@@ -13,6 +13,7 @@ add_library(3nk_engine
         3nk_engine/source/Mesh.cpp
         3nk_engine/source/Node.cpp
         3nk_engine/source/AssimpImporter.cpp
+        3nk_engine/include/3nk/3nk/AssimpToGLM.hpp
 )
 target_include_directories(3nk_engine
         PUBLIC 3nk_engine/include/glad
