@@ -1,0 +1,153 @@
+#pragma once
+
+#include <array>
+#include <cmath>
+#include <vector>
+#include <3nk/Animation.hpp>
+#include <fmt/core.h>
+#include <glm/gtc/quaternion.hpp>
+
+#include "Node.hpp"
+
+constexpr int MAX_JOINTS = 100;
+
+class Animator {
+public:
+    Animation *mCurrentAnimation = nullptr;
+    std::vector<Node> *mModelNodes = nullptr;
+    std::vector<Animation> mAnimations;
+    float mCurrentAnimationTime = 0.0f;
+    std::array<glm::mat4, MAX_JOINTS> mBoneMatrices;
+    void Update(float dt) {
+        // dt /= 10.0f;
+        if (mCurrentAnimation != nullptr) {
+            const auto &anim = *mCurrentAnimation;
+            mCurrentAnimationTime += dt;
+            mCurrentAnimationTime = std::fmod(mCurrentAnimationTime, anim.mDuration);
+            CalculateBones(0, glm::mat4{1.0f}, mCurrentAnimationTime);
+        }
+    }
+    void PlayAnimation(int id) {
+        if (id < 0 or id >= mAnimations.size()) {
+            fmt::print("Trying to play non-existent animation!\n");
+            return;
+        }
+        mCurrentAnimation = &mAnimations[id];
+        mCurrentAnimationTime = 0.0f;
+    }
+
+    float GetScaleFactor(float lastTimeStamp, float nextTimeStamp, float animationTime)
+    {
+        float midWayLength = animationTime - lastTimeStamp;
+        float framesDiff = nextTimeStamp - lastTimeStamp;
+        if (framesDiff == 0.0f) {
+            return 0.0f;
+        }
+        float scaleFactor = midWayLength / framesDiff;
+        return scaleFactor;
+    }
+
+    void CalculateBones(size_t nodeId, glm::mat4 transform, float dt) {
+        assert(mModelNodes != nullptr);
+        auto &node = (*mModelNodes)[nodeId];
+        glm::mat4 nodeT = node.transform;
+        // Get bone
+        if (node.animNodeIndex != -1) {
+            auto &bone = mCurrentAnimation->mNodes[node.animNodeIndex];
+            auto t = glm::vec3(0.0f);
+            auto s = glm::vec3(1.0f);
+            auto r = glm::identity<glm::quat>();
+            if (!bone.positionKeys.empty()) {
+                t = InterpolatePosition(bone, dt);
+            }
+            if (!bone.rotationKeys.empty()) {
+                r = InterpolateRotation(bone, dt);
+            }
+            if (!bone.scalingKeys.empty()) {
+                s = InterpolateScaling(bone, dt);
+            }
+
+            glm::mat4 T = glm::translate(glm::mat4(1.0f), t);
+            glm::mat4 R = glm::mat4_cast(r); // quaternion → mat4
+            glm::mat4 S = glm::scale(glm::mat4(1.0f), s);
+            nodeT = T * R * S;
+        }
+
+        glm::mat4 globalT = transform * nodeT;
+
+        if (node.boneIndex != -1) {
+            auto bi = mCurrentAnimation->mBoneInfos[node.boneIndex];
+            mBoneMatrices[node.boneIndex] = globalT * bi.mOffsetMatrix;
+        }
+
+        for (size_t i = 0; i < node.childrenIndices.size(); ++i) {
+            CalculateBones(node.childrenIndices[i], globalT, dt);
+        }
+    }
+
+    glm::vec3 InterpolatePosition(const AnimationNode &bone, float dt) {
+        if (bone.positionKeys.size() == 1) {
+            return bone.positionKeys[0].position;
+        }
+        const int p0_index = GetPositionKeyIndex(bone, dt);
+        const int p1_index = p0_index + 1;
+        const auto &p0 = bone.positionKeys[p0_index];
+        const auto &p1 = bone.positionKeys[p1_index];
+        float scale_factor = GetScaleFactor(p0.timeStamp, p1.timeStamp, dt);
+        return glm::mix(p0.position, p1.position, scale_factor);
+    }
+
+    glm::quat InterpolateRotation(const AnimationNode &bone, float dt) {
+        if (bone.rotationKeys.size() == 1) {
+            return bone.rotationKeys[0].rotation;
+        }
+        const int r0_index = GetRotationKeyIndex(bone, dt);
+        const int r1_index = r0_index + 1;
+        const auto &r0 = bone.rotationKeys[r0_index];
+        const auto &r1 = bone.rotationKeys[r1_index];
+        float scale_factor = GetScaleFactor(r0.timeStamp, r1.timeStamp, dt);
+        // FIXME: Quaternion shortest path issue - edge case: r0 and r1 are on opposite hemispheres
+        return glm::slerp(r0.rotation, r1.rotation, scale_factor);
+    }
+
+    glm::vec3 InterpolateScaling(const AnimationNode &bone, float dt) {
+        if (bone.scalingKeys.size() == 1) {
+            return bone.scalingKeys[0].scale;
+        }
+        assert(bone.scalingKeys.size() >= 2);
+        const int s0_index = GetScalingKeyIndex(bone, dt);
+        const int s1_index = s0_index + 1;
+        const auto &p0 = bone.scalingKeys[s0_index];
+        const auto &p1 = bone.scalingKeys[s1_index];
+        float scale_factor = GetScaleFactor(p0.timeStamp, p1.timeStamp, dt);
+        return glm::mix(p0.scale, p1.scale, scale_factor);
+    }
+
+
+    int32_t GetPositionKeyIndex(const AnimationNode &bone, float dt) {
+        for (size_t i = 0; i < bone.positionKeys.size(); ++i) {
+            if (dt < bone.positionKeys[i + 1].timeStamp) {
+                return i;
+            }
+        }
+        assert(0);
+    }
+
+    int32_t GetRotationKeyIndex(const AnimationNode &bone, float dt) {
+        for (size_t i = 0; i < bone.rotationKeys.size() - 1; ++i) {
+            if (dt < bone.rotationKeys[i + 1].timeStamp) {
+                return i;
+            }
+        }
+        assert(0);
+    }
+
+    int32_t GetScalingKeyIndex(const AnimationNode &bone, float dt) {
+        for (size_t i = 0; i < bone.scalingKeys.size(); ++i) {
+            if (dt < bone.scalingKeys[i + 1].timeStamp) {
+                return i;
+            }
+        }
+        assert(0);
+    }
+};

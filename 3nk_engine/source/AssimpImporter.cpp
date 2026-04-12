@@ -114,14 +114,18 @@ void ProcessMesh(Mesh &pMesh, aiMesh *pAiMesh, const aiScene *scene, Model &mode
             BoneInfo bi{};
 
             bi.mOffsetMatrix = AssimpToGLM::ConvertMatrixToGLMFormat(bone->mOffsetMatrix);
-            model.boneInfos.push_back(bi);
+            // model.boneInfos.push_back(bi);
+            model.mAnimator->mAnimations[0].mBoneInfos.push_back(bi);
 
 
             std::string boneName(bone->mName.C_Str());
 
+            // Kinda bs hack but will suffice for now
+            int32_t &numBones = model.mAnimator->mAnimations[0].mNumBones;
+
             if (!boneMap.contains(boneName)) {
-                boneMap[boneName] = model.numBones;
-                model.numBones++;
+                boneMap[boneName] = numBones;
+                numBones++;
             }
             else {
                 fmt::print(stderr, "some facing repeat i dont know\n");
@@ -184,11 +188,12 @@ void ProcessAnimations(Model &model, const aiScene *scene) {
     assert(scene->mNumAnimations == 1);
     for (size_t i = 0; i < scene->mNumAnimations; ++i) {
         aiAnimation *animation = scene->mAnimations[i];
+        auto &ANIMATION = model.mAnimator->mAnimations[0];
         fmt::print("DURATION IN TICKS: {}\n", animation->mDuration);
         fmt::print("TICKS PER SECOND: {}\n", animation->mTicksPerSecond);
-        model.animDuration = animation->mDuration / animation->mTicksPerSecond;
+        ANIMATION.mDuration = animation->mDuration / animation->mTicksPerSecond;
         fmt::print("mNumChannels {}\n", animation->mNumChannels);
-        model.animationNodes.resize(animation->mNumChannels);
+        ANIMATION.mNodes.resize(animation->mNumChannels);
         for (int j = 0; j < animation->mNumChannels; ++j) {
             aiNodeAnim *nodeAnim = animation->mChannels[j];
 
@@ -196,32 +201,34 @@ void ProcessAnimations(Model &model, const aiScene *scene) {
             animationMap[animNodeName] = animationNodesCount++;
 
             fmt::print("animNode {}: {}\n", animationNodesCount - 1, nodeAnim->mNodeName.C_Str());
-            model.animationNodes[j].positionKeys.resize(nodeAnim->mNumPositionKeys);
+            auto &animNode = ANIMATION.mNodes[j];
+            animNode.positionKeys.resize(nodeAnim->mNumPositionKeys);
             // fmt::print("\tmNumPositionKeys: {}\n", nodeAnim->mNumPositionKeys);
             for (size_t k = 0; k < nodeAnim->mNumPositionKeys; ++k) {
                 aiVectorKey key = nodeAnim->mPositionKeys[k];
-                model.animationNodes[j].positionKeys[k].position.x = key.mValue.x;
-                model.animationNodes[j].positionKeys[k].position.y = key.mValue.y;
-                model.animationNodes[j].positionKeys[k].position.z = key.mValue.z;
-                model.animationNodes[j].positionKeys[k].timeStamp = key.mTime;
+                animNode.positionKeys[k].position.x = key.mValue.x;
+                animNode.positionKeys[k].position.y = key.mValue.y;
+                animNode.positionKeys[k].position.z = key.mValue.z;
+                // TODO: Keep time in ticks or millisecond?
+                animNode.positionKeys[k].timeStamp = key.mTime / 1000.0f;
                 // fmt::print("\t\tpositionKey {} time: {}\n", k, key.mTime);
             }
             // fmt::print("\tmNumScalingKeys {}\n", nodeAnim->mNumScalingKeys);
-            model.animationNodes[j].scalingKeys.resize(nodeAnim->mNumScalingKeys);
+            animNode.scalingKeys.resize(nodeAnim->mNumScalingKeys);
             for (size_t k = 0; k < nodeAnim->mNumScalingKeys; ++k) {
                 aiVectorKey key = nodeAnim->mScalingKeys[k];
-                model.animationNodes[j].scalingKeys[k].scale.x = key.mValue.x;
-                model.animationNodes[j].scalingKeys[k].scale.y = key.mValue.y;
-                model.animationNodes[j].scalingKeys[k].scale.z = key.mValue.z;
-                model.animationNodes[j].scalingKeys[k].timeStamp = key.mTime;
+                animNode.scalingKeys[k].scale.x = key.mValue.x;
+                animNode.scalingKeys[k].scale.y = key.mValue.y;
+                animNode.scalingKeys[k].scale.z = key.mValue.z;
+                animNode.scalingKeys[k].timeStamp = key.mTime / 1000.0f;
                 // fmt::print("\t\tpositionKey {} time: {}\n", k, key.mTime);
             }
             // fmt::print("\tmNumRotationKeys: {}\n", nodeAnim->mNumRotationKeys);
-            model.animationNodes[j].rotationKeys.resize(nodeAnim->mNumRotationKeys);
+            animNode.rotationKeys.resize(nodeAnim->mNumRotationKeys);
             for (size_t k = 0; k < nodeAnim->mNumRotationKeys; ++k) {
                 aiQuatKey key = nodeAnim->mRotationKeys[k];
-                model.animationNodes[j].rotationKeys[k].rotation = AssimpToGLM::GetGLMQuat(key.mValue);
-                model.animationNodes[j].rotationKeys[k].timeStamp = key.mTime;
+                animNode.rotationKeys[k].rotation = AssimpToGLM::GetGLMQuat(key.mValue);
+                animNode.rotationKeys[k].timeStamp = key.mTime / 1000.0f;
                 // fmt::print("\t\tpositionKey {} time: {}\n", k, key.mTime);
             }
         }
@@ -270,13 +277,28 @@ void AssimpImport(Model &model, const std::string &filename) {
     int index = 0;
     ProcessNode(0, scene->mRootNode, model, &index);
 
-    // Count bones
+    bool hasAnimations = false;
+    model.mAnimator = new Animator;
+    model.mAnimator->mAnimations.resize(1);
+    assert(model.mAnimator != nullptr);
+
     int totalBones = 0;
-    for (size_t i = 0; i < scene->mNumMeshes; ++i) {
-        aiMesh *mesh = scene->mMeshes[i];
-        totalBones += mesh->mNumBones;
+    if (scene->HasAnimations()) {
+        hasAnimations = true;
+        fmt::print("Animations\n");
+        ProcessAnimations(model, scene);
+        // Count bones
+        for (size_t i = 0; i < scene->mNumMeshes; ++i) {
+            aiMesh *mesh = scene->mMeshes[i];
+            totalBones += mesh->mNumBones;
+        }
     }
-    model.boneInfos.reserve(totalBones);
+
+    assert(hasAnimations == true);
+
+
+    model.mAnimator->mAnimations[0].mBoneInfos.reserve(totalBones);
+    // model.boneInfos.reserve(totalBones);
 
     std::unordered_map<std::string, int> boneMap;
 
@@ -298,12 +320,11 @@ void AssimpImport(Model &model, const std::string &filename) {
 
     // assert(model.boneInfos.capacity() == 2);
 
-    model.globalInverseTransform = glm::inverse(model.nodes[0].transform);
+    // model.globalInverseTransform = glm::inverse(model.nodes[0].transform);
 
-    if (scene->HasAnimations()) {
-        fmt::print("Animations\n");
-        ProcessAnimations(model, scene);
-    }
+    model.mAnimator->mCurrentAnimation = &model.mAnimator->mAnimations[0];
+    model.mAnimator->mModelNodes = &model.nodes;
+
 
     int amount = 0;
     for (auto &node : model.nodes) {
