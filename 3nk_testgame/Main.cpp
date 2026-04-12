@@ -84,7 +84,7 @@ void TestScene::Init() {
         exit(4);
     }
 
-    SDL_SetWindowRelativeMouseMode(window, true);
+    // SDL_SetWindowRelativeMouseMode(window, true);
 
     glEnable(GL_DEPTH_TEST);
 
@@ -170,7 +170,7 @@ void TestScene::ProcessEvents() {
             }
             // Switch between bones
             if (event.key.scancode == SDL_SCANCODE_SPACE and boneRender) {
-                selectedBoneId = (selectedBoneId + 1) % skinnedModel.numBones;
+                selectedBoneId = (selectedBoneId + 1) % skinnedModel.mAnimator->mCurrentAnimation->mNumBones;
             }
 
             if (event.key.scancode == SDL_SCANCODE_B) {
