@@ -26,4 +26,5 @@ public:
     std::vector<float> colors;
     std::vector<VertexToBone> vertexToBones;
     int materialIndex = -1;
+    int mNumIndices = 0;
 };
