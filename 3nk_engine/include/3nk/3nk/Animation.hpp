@@ -12,9 +12,7 @@ struct AnimationNode;
 class Animation {
 public:
     float mDuration;
-    int32_t mNumBones = 0;
     std::vector<AnimationNode> mNodes;
-    std::vector<BoneInfo> mBoneInfos;
 };
 
 struct BoneInfo {

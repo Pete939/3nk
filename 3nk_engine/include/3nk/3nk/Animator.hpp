@@ -18,6 +18,8 @@ public:
     std::vector<Animation> mAnimations;
     float mCurrentAnimationTime = 0.0f;
     std::array<glm::mat4, MAX_JOINTS> mBoneMatrices;
+    int32_t mNumBones = 0;
+    std::vector<BoneInfo> mBoneInfos;
     void Update(float dt) {
         // dt /= 10.0f;
         if (mCurrentAnimation != nullptr) {
@@ -76,7 +78,7 @@ public:
         glm::mat4 globalT = transform * nodeT;
 
         if (node.boneIndex != -1) {
-            auto bi = mCurrentAnimation->mBoneInfos[node.boneIndex];
+            auto bi = mBoneInfos[node.boneIndex];
             mBoneMatrices[node.boneIndex] = globalT * bi.mOffsetMatrix;
         }
 

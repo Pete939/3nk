@@ -43,6 +43,7 @@ void Model::AssimpRender(Shader &shader, float dt, bool normalRender=false) {
     shader.setMat4s(uniBoneArrName, 100, mAnimator->mBoneMatrices.data());
 
     glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -1.0f, -5.0f));
+    model = glm::scale(model, glm::vec3(0.01f));
     shader.setMat4("model", model);
 
     meshes[0].Render(shader);

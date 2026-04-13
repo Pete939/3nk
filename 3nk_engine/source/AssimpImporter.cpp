@@ -115,13 +115,13 @@ void ProcessMesh(Mesh &pMesh, aiMesh *pAiMesh, const aiScene *scene, Model &mode
 
             bi.mOffsetMatrix = AssimpToGLM::ConvertMatrixToGLMFormat(bone->mOffsetMatrix);
             // model.boneInfos.push_back(bi);
-            model.mAnimator->mAnimations[0].mBoneInfos.push_back(bi);
+            model.mAnimator->mBoneInfos.push_back(bi);
 
 
             std::string boneName(bone->mName.C_Str());
 
             // Kinda bs hack but will suffice for now
-            int32_t &numBones = model.mAnimator->mAnimations[0].mNumBones;
+            int32_t &numBones = model.mAnimator->mNumBones;
 
             if (!boneMap.contains(boneName)) {
                 boneMap[boneName] = numBones;
@@ -183,12 +183,12 @@ void ProcessNode(uint32_t currentNodeIndex, aiNode *pAiNode, Model &model, int *
 
 void ProcessAnimations(Model &model, const aiScene *scene) {
     fmt::print("mNumAnimations: {}\n", scene->mNumAnimations);
-    uint32_t animationNodesCount = 0;
     std::unordered_map<std::string, int> animationMap;
-    assert(scene->mNumAnimations == 1);
+    // assert(scene->mNumAnimations == 1);
     for (size_t i = 0; i < scene->mNumAnimations; ++i) {
+        uint32_t animationNodesCount = 0;
         aiAnimation *animation = scene->mAnimations[i];
-        auto &ANIMATION = model.mAnimator->mAnimations[0];
+        auto &ANIMATION = model.mAnimator->mAnimations[i];
         fmt::print("DURATION IN TICKS: {}\n", animation->mDuration);
         fmt::print("TICKS PER SECOND: {}\n", animation->mTicksPerSecond);
         ANIMATION.mDuration = animation->mDuration / animation->mTicksPerSecond;
@@ -232,12 +232,12 @@ void ProcessAnimations(Model &model, const aiScene *scene) {
                 // fmt::print("\t\tpositionKey {} time: {}\n", k, key.mTime);
             }
         }
-    }
-
-    for (auto &node: model.nodes) {
-        if (!node.name.empty() and animationMap.contains(node.name)) {
-            node.animNodeIndex = animationMap[node.name];
+        for (auto &node: model.nodes) {
+            if (!node.name.empty() and animationMap.contains(node.name)) {
+                node.animNodeIndex = animationMap[node.name];
+            }
         }
+        animationMap.clear();
     }
 }
 
@@ -279,7 +279,7 @@ void AssimpImport(Model &model, const std::string &filename) {
 
     bool hasAnimations = false;
     model.mAnimator = new Animator;
-    model.mAnimator->mAnimations.resize(1);
+    model.mAnimator->mAnimations.resize(scene->mNumAnimations);
     assert(model.mAnimator != nullptr);
 
     int totalBones = 0;
@@ -297,7 +297,7 @@ void AssimpImport(Model &model, const std::string &filename) {
     assert(hasAnimations == true);
 
 
-    model.mAnimator->mAnimations[0].mBoneInfos.reserve(totalBones);
+    model.mAnimator->mBoneInfos.reserve(totalBones);
     // model.boneInfos.reserve(totalBones);
 
     std::unordered_map<std::string, int> boneMap;

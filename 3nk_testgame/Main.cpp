@@ -23,6 +23,8 @@ public:
     void Update() override;
     ~TestScene() override;
 
+    void RenderUI();
+
 private:
     const char *title = "3nk engine demo - skinning";
     int screenWidth = 1920;
@@ -124,77 +126,49 @@ void TestScene::Init() {
 
     // const char* path = ASSETS_DIR"models/simple-skin/scene.gltf";
     // const char* path = ASSETS_DIR"models/rigged-simple/scene.gltf";
-    const char* path = ASSETS_DIR"models/cesium-man/scene.gltf";
+    // const char* path = ASSETS_DIR"models/cesium-man/scene.gltf";
+    const char* path = ASSETS_DIR"models/fox/scene.gltf";
+    AssimpImport(skinnedModel, path);
+    skinnedModel.InitOpenGLBuffers();
+    loadedModel = true;
     // const char* path = ASSETS_DIR"models/rigged-figure/scene.gltf";
 }
 
-bool my_tool_active = true;
-void TestScene::Render() {
-    // Start the Dear ImGui frame
+int position[3];
+float rotation[3];
+float f;
+bool visible = true;
+bool wireframe = false;
+bool showBones = false;
+void TestScene::RenderUI() {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
 
-
-    ImGui::Begin("My First Tool", &my_tool_active, ImGuiWindowFlags_MenuBar);
-    if (ImGui::BeginMenuBar())
-    {
-        if (ImGui::BeginMenu("File"))
-        {
-            if (ImGui::MenuItem("Open..", "Ctrl+O")) {
-                nfdu8char_t *outPath;
-                nfdu8filteritem_t filters[1] = { { "Asset files", "gltf,obj,fbx" }};
-                nfdopendialogu8args_t args = {0};
-                args.filterList = filters;
-                args.filterCount = 1;
-                nfdresult_t result = NFD_OpenDialogU8_With(&outPath, &args);
-                if (result == NFD_OKAY)
-                {
-                    puts("Success!");
-                    puts(outPath);
-                    AssimpImport(skinnedModel, outPath);
-                    skinnedModel.InitOpenGLBuffers();
-                    loadedModel = true;
-                    NFD_FreePathU8(outPath);
-                }
-                else if (result == NFD_CANCEL)
-                {
-                    puts("User pressed cancel.");
-                }
-                else
-                {
-                    printf("Error: %s\n", NFD_GetError());
-                }
-            }
-            if (ImGui::MenuItem("Save", "Ctrl+S"))   { /* Do stuff */ }
-            if (ImGui::MenuItem("Close", "Ctrl+W"))  { my_tool_active = false; }
-            ImGui::EndMenu();
-        }
-        ImGui::EndMenuBar();
-    }
-
-    // Edit a color stored as 4 floats
-
-    float my_color[4];
-    ImGui::ColorEdit4("Color", my_color);
-
-    // Generate samples and plot them
-    float samples[100];
-    for (int n = 0; n < 100; n++)
-        samples[n] = sinf(n * 0.2f + ImGui::GetTime() * 1.5f);
-    ImGui::PlotLines("Samples", samples, 100);
-
-    // Display contents in a scrolling region
-    ImGui::TextColored(ImVec4(1,1,0,1), "Important Stuff");
-    ImGui::BeginChild("Scrolling");
-    for (int n = 0; n < 50; n++)
-        ImGui::Text("%04d: Some text", n);
-    ImGui::EndChild();
-    ImGui::End();
-
     // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
     ImGui::ShowDemoWindow();
+
+    bool toolActive = true;
+    ImGui::Begin("Inspector", &toolActive, ImGuiWindowFlags_MenuBar);
+
+    // if (ImGui::Button("Save"))
+    // MySaveFunction();
+    // ImGui::InputText("string", buf, IM_COUNTOF(buf));
+    ImGui::InputInt3("Position", position);
+    ImGui::SliderFloat3("Rotation", rotation, -360.0f, 360.0f);
+    ImGui::SliderFloat("Scale", &f, 0.0f, 1.0f);
+    ImGui::Checkbox("Visible", &visible);
+    ImGui::Checkbox("Show Bones", &showBones);
+    ImGui::Checkbox("Show Triangles", &wireframe);
+
+    ImGui::End();
+
     ImGui::Render();
+}
+
+void TestScene::Render() {
+
+    RenderUI();
 
     float r = 0.5f;
     float g = 0.5f;
@@ -269,7 +243,7 @@ void TestScene::ProcessEvents() {
             }
             // Switch between bones
             if (event.key.scancode == SDL_SCANCODE_SPACE and boneRender) {
-                selectedBoneId = (selectedBoneId + 1) % skinnedModel.mAnimator->mCurrentAnimation->mNumBones;
+                selectedBoneId = (selectedBoneId + 1) % skinnedModel.mAnimator->mNumBones;
             }
 
             if (event.key.scancode == SDL_SCANCODE_B) {
