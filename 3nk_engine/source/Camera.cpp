@@ -37,25 +37,28 @@ void Camera::Move(float dt) {
         position.y -= speed_;
     }
 
-    float mouseX;
-    float mouseY;
-    SDL_GetRelativeMouseState(&mouseX, &mouseY);
-    float sensitivity = 0.1f;
-    mouseX *= sensitivity;
-    mouseY *= sensitivity;
-    yaw += mouseX;
-    pitch += mouseY;
-    if (pitch > 89.0f) {
-        pitch = 89.0f;
-    }
-    if (pitch < -89.0f) {
-        pitch = -89.0f;
+    if (keys[SDL_SCANCODE_LCTRL]) {
+        float mouseX;
+        float mouseY;
+        SDL_GetRelativeMouseState(&mouseX, &mouseY);
+        float sensitivity = 0.1f;
+        mouseX *= sensitivity;
+        mouseY *= sensitivity;
+        yaw += mouseX;
+        pitch += mouseY;
+        if (pitch > 89.0f) {
+            pitch = 89.0f;
+        }
+        if (pitch < -89.0f) {
+            pitch = -89.0f;
+        }
+
+        direction.x = std::cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+        direction.y = -std::sin(glm::radians(pitch));
+        direction.z = std::sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+        direction = glm::normalize(direction);
     }
 
-    direction.x = std::cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-    direction.y = -std::sin(glm::radians(pitch));
-    direction.z = std::sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-    direction = glm::normalize(direction);
 }
 
 // namespace nk3 {
