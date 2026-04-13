@@ -37,15 +37,20 @@ void Camera::Move(float dt) {
         position.y -= speed_;
     }
 
+    float mouseX;
+    float mouseY;
+    SDL_GetMouseState(&mouseX, &mouseY);
+
     if (keys[SDL_SCANCODE_LCTRL]) {
-        float mouseX;
-        float mouseY;
-        SDL_GetRelativeMouseState(&mouseX, &mouseY);
+        float xOffset = mouseX - lastX;
+        float yOffset = mouseY - lastY;
+        lastX = mouseX;
+        lastY = mouseY;
         float sensitivity = 0.1f;
-        mouseX *= sensitivity;
-        mouseY *= sensitivity;
-        yaw += mouseX;
-        pitch += mouseY;
+        xOffset *= sensitivity;
+        yOffset *= sensitivity;
+        yaw += xOffset;
+        pitch += yOffset;
         if (pitch > 89.0f) {
             pitch = 89.0f;
         }
@@ -57,6 +62,10 @@ void Camera::Move(float dt) {
         direction.y = -std::sin(glm::radians(pitch));
         direction.z = std::sin(glm::radians(yaw)) * cos(glm::radians(pitch));
         direction = glm::normalize(direction);
+    }
+    else {
+        lastX = mouseX;
+        lastY = mouseY;
     }
 
 }

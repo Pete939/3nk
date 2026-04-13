@@ -20,4 +20,7 @@ public:
     float speed;
     float yaw;
     float pitch;
+private:
+    float lastX;
+    float lastY;
 };
