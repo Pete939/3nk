@@ -35,19 +35,16 @@ void Model::AssimpNodeRender(size_t idx, glm::mat4 transform, Shader &shader,flo
 
 
 
-void Model::AssimpRender(Shader &shader, float dt, bool normalRender=false) {
+void Model::AssimpRender(Shader &shader, const glm::mat4 &transform, float dt) {
     assert(mAnimator != nullptr);
     mAnimator->Update(dt);
 
     std::string uniBoneArrName("boneMatrices");
     shader.setMat4s(uniBoneArrName, 100, mAnimator->mBoneMatrices.data());
 
-    glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -1.0f, -5.0f));
-    model = glm::scale(model, glm::vec3(0.01f));
-    shader.setMat4("model", model);
+    shader.setMat4("model", transform);
 
     meshes[0].Render(shader);
-    // AssimpNodeRender(0, glm::mat4{1.0f}, shader, dt);
 }
 
 void Model::InitOpenGLBuffers() {

@@ -13,28 +13,38 @@ constexpr int MAX_JOINTS = 100;
 
 class Animator {
 public:
-    Animation *mCurrentAnimation = nullptr;
+    int32_t mCurrentAnimationIndex = -1;
+    int32_t mNumBones = 0;
     std::vector<Node> *mModelNodes = nullptr;
     std::vector<Animation> mAnimations;
     float mCurrentAnimationTime = 0.0f;
     std::array<glm::mat4, MAX_JOINTS> mBoneMatrices;
-    int32_t mNumBones = 0;
     std::vector<BoneInfo> mBoneInfos;
+    bool mAnimationPaused = false;
     void Update(float dt) {
-        // dt /= 10.0f;
-        if (mCurrentAnimation != nullptr) {
-            const auto &anim = *mCurrentAnimation;
+        if (mCurrentAnimationIndex != -1) {
+            mAnimationPaused = false;
+            const auto &anim = mAnimations[mCurrentAnimationIndex];
             mCurrentAnimationTime += dt;
             mCurrentAnimationTime = std::fmod(mCurrentAnimationTime, anim.mDuration);
             CalculateBones(0, glm::mat4{1.0f}, mCurrentAnimationTime);
         }
+        else {
+            if (mAnimationPaused) {
+                return;
+            }
+            for (auto &mat : mBoneMatrices) {
+                mat = glm::mat4{1.0f};
+            }
+            mAnimationPaused = true;
+        }
     }
     void PlayAnimation(int id) {
-        if (id < 0 or id >= mAnimations.size()) {
-            fmt::print("Trying to play non-existent animation!\n");
-            return;
-        }
-        mCurrentAnimation = &mAnimations[id];
+        // if (id < 0 or id >= mAnimations.size()) {
+            // fmt::print("Trying to play non-existent animation!\n");
+            // return;
+        // }
+        mCurrentAnimationIndex = id;
         mCurrentAnimationTime = 0.0f;
     }
 
@@ -55,7 +65,7 @@ public:
         glm::mat4 nodeT = node.transform;
         // Get bone
         if (node.animNodeIndex != -1) {
-            auto &bone = mCurrentAnimation->mNodes[node.animNodeIndex];
+            auto &bone = mAnimations[mCurrentAnimationIndex].mNodes[node.animNodeIndex];
             auto t = glm::vec3(0.0f);
             auto s = glm::vec3(1.0f);
             auto r = glm::identity<glm::quat>();

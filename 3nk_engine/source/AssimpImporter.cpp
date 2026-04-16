@@ -322,7 +322,6 @@ void AssimpImport(Model &model, const std::string &filename) {
 
     // model.globalInverseTransform = glm::inverse(model.nodes[0].transform);
 
-    model.mAnimator->mCurrentAnimation = &model.mAnimator->mAnimations[0];
     model.mAnimator->mModelNodes = &model.nodes;
 
 

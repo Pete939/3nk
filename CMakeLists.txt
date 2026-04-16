@@ -13,6 +13,10 @@ add_library(3nk_engine
         3nk_engine/source/Mesh.cpp
         3nk_engine/source/Node.cpp
         3nk_engine/source/AssimpImporter.cpp
+        3nk_engine/source/EntityManager.cpp
+        3nk_engine/source/Entity.cpp
+        3nk_engine/source/EntityPool.cpp
+        3nk_engine/source/Components.cpp
 )
 target_include_directories(3nk_engine
         PUBLIC 3nk_engine/include/glad
