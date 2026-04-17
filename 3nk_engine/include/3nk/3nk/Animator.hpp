@@ -48,16 +48,7 @@ public:
         mCurrentAnimationTime = 0.0f;
     }
 
-    float GetScaleFactor(float lastTimeStamp, float nextTimeStamp, float animationTime)
-    {
-        float midWayLength = animationTime - lastTimeStamp;
-        float framesDiff = nextTimeStamp - lastTimeStamp;
-        if (framesDiff == 0.0f) {
-            return 0.0f;
-        }
-        float scaleFactor = midWayLength / framesDiff;
-        return scaleFactor;
-    }
+
 
     void CalculateBones(size_t nodeId, glm::mat4 transform, float dt) {
         assert(mModelNodes != nullptr);
@@ -97,6 +88,7 @@ public:
         }
     }
 
+private:
     glm::vec3 InterpolatePosition(const AnimationNode &bone, float dt) {
         if (bone.positionKeys.size() == 1) {
             return bone.positionKeys[0].position;
@@ -135,7 +127,6 @@ public:
         return glm::mix(p0.scale, p1.scale, scale_factor);
     }
 
-
     int32_t GetPositionKeyIndex(const AnimationNode &bone, float dt) {
         for (size_t i = 0; i < bone.positionKeys.size(); ++i) {
             if (dt < bone.positionKeys[i + 1].timeStamp) {
@@ -161,5 +152,16 @@ public:
             }
         }
         assert(0);
+    }
+
+    float GetScaleFactor(float lastTimeStamp, float nextTimeStamp, float animationTime)
+    {
+        float midWayLength = animationTime - lastTimeStamp;
+        float framesDiff = nextTimeStamp - lastTimeStamp;
+        if (framesDiff == 0.0f) {
+            return 0.0f;
+        }
+        float scaleFactor = midWayLength / framesDiff;
+        return scaleFactor;
     }
 };
