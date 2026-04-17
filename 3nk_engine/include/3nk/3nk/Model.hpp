@@ -14,10 +14,10 @@ public:
 
     void InitOpenGLBuffers();
     // void SetTransformMatrix(const glm::mat4 &mat);
-    std::string directory;
-    std::vector<Node> nodes;
-    std::vector<Mesh> meshes;
-    std::vector<Texture> textures;
+    std::string mDirectory;
+    std::vector<Node> mNodes;
+    std::vector<Mesh> mMeshes;
+    std::vector<Texture> mTextures;
     Animator *mAnimator = nullptr;
 private:
     void AssimpNodeRender(size_t idx, glm::mat4 transform, Shader &shader, float dt);

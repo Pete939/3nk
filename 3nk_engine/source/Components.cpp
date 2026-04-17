@@ -5,8 +5,8 @@
 Component::Component() { mActive = true; }
 
 glm::mat4 CTransform::Matrix() const {
-    const glm::mat4 matrix = glm::translate(glm::mat4{1.0f}, position);
-    return glm::scale(matrix, scale);
+    const glm::mat4 matrix = glm::translate(glm::mat4{1.0f}, mPosition);
+    return glm::scale(matrix, mScale);
 }
 
 void CTransform::Start() {}
@@ -14,9 +14,9 @@ void CTransform::Start() {}
 void CTransform::Update(float dt) {}
 
 void CTransform::OnInspector() {
-    ImGui::InputFloat3("Position", &position.x);
-    ImGui::InputFloat("Scale", &scale.x);
-    scale.y = scale.z = scale.x;
+    ImGui::InputFloat3("Position", &mPosition.x);
+    ImGui::InputFloat("Scale", &mScale.x);
+    mScale.y = mScale.z = mScale.x;
 }
 
 // CRender::CRender() {}

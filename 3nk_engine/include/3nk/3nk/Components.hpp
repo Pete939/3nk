@@ -16,9 +16,9 @@ public:
 
 class CTransform : public Component {
 public:
-    glm::vec3 position{0.0f};
+    glm::vec3 mPosition{0.0f};
     // glm::quat rotation;
-    glm::vec3 scale{1.0f};
+    glm::vec3 mScale{1.0f};
     glm::mat4 Matrix() const;
     void Start() override;
     void Update(float dt) override;

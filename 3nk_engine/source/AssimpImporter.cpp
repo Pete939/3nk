@@ -17,9 +17,9 @@ void CountNodes(aiNode* node, uint32_t *count) {
 }
 
 bool IsTextureAlreadyLoaded(const Model &model, const std::string &path) {
-    for (auto &texture : model.textures) {
-        if (!texture.path.empty()) {
-            if (std::strcmp(texture.path.c_str(), path.c_str()) == 0) {
+    for (auto &texture : model.mTextures) {
+        if (!texture.mPath.empty()) {
+            if (std::strcmp(texture.mPath.c_str(), path.c_str()) == 0) {
                 return true;
             }
         }
@@ -32,20 +32,20 @@ void ProcessMesh(Mesh &pMesh, aiMesh *pAiMesh, const aiScene *scene, Model &mode
     if (pAiMesh->HasPositions()) {
         constexpr size_t VERTEX_COMPONENT_COUNT = 3;
         // Process Vertices
-        pMesh.vertices.resize(pAiMesh->mNumVertices * VERTEX_COMPONENT_COUNT);
+        pMesh.mVertices.resize(pAiMesh->mNumVertices * VERTEX_COMPONENT_COUNT);
         for (size_t j = 0; j < pAiMesh->mNumVertices; ++j) {
             aiVector3D vertex = pAiMesh->mVertices[j];
-            pMesh.vertices[j * 3 + 0] = vertex.x;
-            pMesh.vertices[j * 3 + 1] = vertex.y;
-            pMesh.vertices[j * 3 + 2] = vertex.z;
+            pMesh.mVertices[j * 3 + 0] = vertex.x;
+            pMesh.mVertices[j * 3 + 1] = vertex.y;
+            pMesh.mVertices[j * 3 + 2] = vertex.z;
         }
         if (pAiMesh->HasTextureCoords(0)) {
             constexpr size_t TEXCOORD_COMPONENT_COUNT = 2;
-            pMesh.texCoords.resize(pAiMesh->mNumVertices * TEXCOORD_COMPONENT_COUNT);
+            pMesh.mTexCoords.resize(pAiMesh->mNumVertices * TEXCOORD_COMPONENT_COUNT);
             for (size_t j = 0; j < pAiMesh->mNumVertices; ++j) {
                 aiVector3D texCoord = pAiMesh->mTextureCoords[0][j];
-                pMesh.texCoords[j * 2 + 0] = texCoord.x;
-                pMesh.texCoords[j * 2 + 1] = texCoord.y;
+                pMesh.mTexCoords[j * 2 + 0] = texCoord.x;
+                pMesh.mTexCoords[j * 2 + 1] = texCoord.y;
             }
         }
     }
@@ -56,13 +56,13 @@ void ProcessMesh(Mesh &pMesh, aiMesh *pAiMesh, const aiScene *scene, Model &mode
     if (pAiMesh->HasFaces()) {
         // Assume always triangles.
         constexpr size_t INDICES_IN_EACH_FACE = 3;
-        pMesh.indices.resize(pAiMesh->mNumFaces * INDICES_IN_EACH_FACE);
+        pMesh.mIndices.resize(pAiMesh->mNumFaces * INDICES_IN_EACH_FACE);
         for (size_t j = 0; j < pAiMesh->mNumFaces; ++j) {
             aiFace face = pAiMesh->mFaces[j];
             assert(face.mNumIndices == INDICES_IN_EACH_FACE);
-            pMesh.indices[j * 3 + 0] = face.mIndices[0];
-            pMesh.indices[j * 3 + 1] = face.mIndices[1];
-            pMesh.indices[j * 3 + 2] = face.mIndices[2];
+            pMesh.mIndices[j * 3 + 0] = face.mIndices[0];
+            pMesh.mIndices[j * 3 + 1] = face.mIndices[1];
+            pMesh.mIndices[j * 3 + 2] = face.mIndices[2];
         }
     }
     else {
@@ -71,12 +71,12 @@ void ProcessMesh(Mesh &pMesh, aiMesh *pAiMesh, const aiScene *scene, Model &mode
 
     if (pAiMesh->HasNormals()) {
         constexpr int NORMAL_COMPONENT_COUNT = 3;
-        pMesh.normals.resize(pAiMesh->mNumVertices * NORMAL_COMPONENT_COUNT);
+        pMesh.mNormals.resize(pAiMesh->mNumVertices * NORMAL_COMPONENT_COUNT);
         for (size_t j = 0; j < pAiMesh->mNumVertices; ++j) {
             aiVector3D normal = pAiMesh->mNormals[j];
-            pMesh.normals[j * 3 + 0] = normal.x;
-            pMesh.normals[j * 3 + 1] = normal.y;
-            pMesh.normals[j * 3 + 2] = normal.z;
+            pMesh.mNormals[j * 3 + 0] = normal.x;
+            pMesh.mNormals[j * 3 + 1] = normal.y;
+            pMesh.mNormals[j * 3 + 2] = normal.z;
         }
     }
 
@@ -86,14 +86,14 @@ void ProcessMesh(Mesh &pMesh, aiMesh *pAiMesh, const aiScene *scene, Model &mode
         aiString str;
         mat->GetTexture(aiTextureType_BASE_COLOR, 0, &str);
         if (mat->GetTextureCount(aiTextureType_BASE_COLOR) != 0) {
-            std::string path = model.directory + std::string(str.C_Str());
+            std::string path = model.mDirectory + std::string(str.C_Str());
             if (!IsTextureAlreadyLoaded(model, path)) {
-                model.textures[0].load(path);
+                model.mTextures[0].Load(path);
                 fmt::print("texture path: {}\n", str.C_Str());
             }
         }
 
-        pMesh.materialIndex = pAiMesh->mMaterialIndex;
+        pMesh.mMaterialIndex = pAiMesh->mMaterialIndex;
         // constexpr int ASSIMP_MAX_TEXTURE_TYPES = 27;
         // fmt::print("TEXTURE TYPE COUNTS\n");
         // for (size_t i = 0; i <= ASSIMP_MAX_TEXTURE_TYPES; ++i) {
@@ -104,7 +104,7 @@ void ProcessMesh(Mesh &pMesh, aiMesh *pAiMesh, const aiScene *scene, Model &mode
     if (pAiMesh->HasBones()) {
         std::vector<int> vertexBoneCount; // Temporary vector that stores how many bones have been discovered per vertex
         vertexBoneCount.resize(pAiMesh->mNumVertices, 0);
-        pMesh.vertexToBones.resize(pAiMesh->mNumVertices);
+        pMesh.mVertexToBones.resize(pAiMesh->mNumVertices);
         fmt::print("\t\tmNumBones: {}\n", pAiMesh->mNumBones);
         fmt::print("\t\tBones:\n");
         for (size_t i = 0; i < pAiMesh->mNumBones; ++i) {
@@ -113,7 +113,7 @@ void ProcessMesh(Mesh &pMesh, aiMesh *pAiMesh, const aiScene *scene, Model &mode
             // fmt::print("\t\t\t\tname: {}\n", bone->mName.C_Str());
             BoneInfo bi{};
 
-            bi.mOffsetMatrix = AssimpToGLM::ConvertMatrixToGLMFormat(bone->mOffsetMatrix);
+            bi.offsetMatrix = AssimpToGLM::ConvertMatrixToGLMFormat(bone->mOffsetMatrix);
             // model.boneInfos.push_back(bi);
             model.mAnimator->mBoneInfos.push_back(bi);
 
@@ -137,8 +137,8 @@ void ProcessMesh(Mesh &pMesh, aiMesh *pAiMesh, const aiScene *scene, Model &mode
             for (size_t j = 0; j < bone->mNumWeights; ++j) {
                 aiVertexWeight weight = bone->mWeights[j];
                 uint32_t idx = vertexBoneCount[weight.mVertexId]++;
-                pMesh.vertexToBones[weight.mVertexId].boneIds[idx] = i;
-                pMesh.vertexToBones[weight.mVertexId].weights[idx] = weight.mWeight;
+                pMesh.mVertexToBones[weight.mVertexId].boneIds[idx] = i;
+                pMesh.mVertexToBones[weight.mVertexId].weights[idx] = weight.mWeight;
                 // fmt::print("\tWeight {}: vertexId: {}, Weight: {}\n", j, weight.mVertexId, weight.mWeight);
             }
         }
@@ -148,28 +148,28 @@ void ProcessMesh(Mesh &pMesh, aiMesh *pAiMesh, const aiScene *scene, Model &mode
 void ProcessNode(uint32_t currentNodeIndex, aiNode *pAiNode, Model &model, int *pCurrentIndex) {
 
     currentNodeIndex = *pCurrentIndex;
-    assert(model.nodes.size() > currentNodeIndex);
-    auto &modelNode = model.nodes[currentNodeIndex];
+    assert(model.mNodes.size() > currentNodeIndex);
+    auto &modelNode = model.mNodes[currentNodeIndex];
 
     assert(pAiNode->mName.C_Str() != nullptr);
-    modelNode.name = std::string(pAiNode->mName.C_Str());
-    fmt::print("\tnode {}: {}\n", currentNodeIndex, modelNode.name);
+    modelNode.mName = std::string(pAiNode->mName.C_Str());
+    fmt::print("\tnode {}: {}\n", currentNodeIndex, modelNode.mName);
 
     assert(pAiNode->mNumMeshes <= 1);
     for (size_t i = 0; i < pAiNode->mNumMeshes; ++i) {
         uint32_t meshIdx = pAiNode->mMeshes[i];
-        modelNode.meshIndex = meshIdx;
+        modelNode.mMeshIndex = meshIdx;
         fmt::print("\t\tmesh index: {}\n", meshIdx);
     }
 
-    modelNode.transform = AssimpToGLM::ConvertMatrixToGLMFormat(pAiNode->mTransformation);
+    modelNode.mTransform = AssimpToGLM::ConvertMatrixToGLMFormat(pAiNode->mTransformation);
 
     // Process node's children
     int nodeIndex = currentNodeIndex;
     if (pAiNode->mNumChildren > 0) {
-        modelNode.childrenIndices.resize(pAiNode->mNumChildren);
+        modelNode.mChildrenIndices.resize(pAiNode->mNumChildren);
         for (size_t i = 0; i < pAiNode->mNumChildren; ++i) {
-            modelNode.childrenIndices[i] = ++(*pCurrentIndex);
+            modelNode.mChildrenIndices[i] = ++(*pCurrentIndex);
             ProcessNode(currentNodeIndex, pAiNode->mChildren[i], model, pCurrentIndex);
         }
         // fmt::print("\tnode {} child indices:", nodeIndex);
@@ -232,9 +232,9 @@ void ProcessAnimations(Model &model, const aiScene *scene) {
                 // fmt::print("\t\tpositionKey {} time: {}\n", k, key.mTime);
             }
         }
-        for (auto &node: model.nodes) {
-            if (!node.name.empty() and animationMap.contains(node.name)) {
-                node.animNodeIndex = animationMap[node.name];
+        for (auto &node: model.mNodes) {
+            if (!node.mName.empty() and animationMap.contains(node.mName)) {
+                node.mAnimNodeIndex = animationMap[node.mName];
             }
         }
         animationMap.clear();
@@ -263,16 +263,16 @@ void AssimpImport(Model &model, const std::string &filename) {
 
     std::string directory(filename);
     size_t dir = directory.rfind('/');
-    model.directory = directory.substr(0, dir + 1);
+    model.mDirectory = directory.substr(0, dir + 1);
 
-    model.meshes.resize(scene->mNumMeshes);
-    model.textures.resize(scene->mNumMaterials);
+    model.mMeshes.resize(scene->mNumMeshes);
+    model.mTextures.resize(scene->mNumMaterials);
 
     // Node process
     uint32_t count = 1 + scene->mRootNode->mNumChildren; // Count root node and it's children
     CountNodes(scene->mRootNode, &count);
     fmt::print("NODE COUNT: {}\n", count);
-    model.nodes.resize(count);
+    model.mNodes.resize(count);
     fmt::print("Node hierarchy\n");
     int index = 0;
     ProcessNode(0, scene->mRootNode, model, &index);
@@ -307,14 +307,14 @@ void AssimpImport(Model &model, const std::string &filename) {
     for (size_t i = 0; i < scene->mNumMeshes; ++i) {
         fmt::print("\tMesh {}\n", i);
         aiMesh *mesh = scene->mMeshes[i];
-        auto &modelMesh = model.meshes[i];
+        auto &modelMesh = model.mMeshes[i];
         ProcessMesh(modelMesh, mesh, scene, model, boneMap);
     }
 
     // TODO: Link nodes to bones
-    for (auto &node: model.nodes) {
-        if (!node.name.empty() and boneMap.contains(node.name)) {
-            node.boneIndex = boneMap[node.name];
+    for (auto &node: model.mNodes) {
+        if (!node.mName.empty() and boneMap.contains(node.mName)) {
+            node.mBoneIndex = boneMap[node.mName];
         }
     }
 
@@ -322,11 +322,11 @@ void AssimpImport(Model &model, const std::string &filename) {
 
     // model.globalInverseTransform = glm::inverse(model.nodes[0].transform);
 
-    model.mAnimator->mModelNodes = &model.nodes;
+    model.mAnimator->mModelNodes = &model.mNodes;
 
 
     int amount = 0;
-    for (auto &node : model.nodes) {
-        fmt::print("node {}: {}\n", amount++, node.animNodeIndex);
+    for (auto &node : model.mNodes) {
+        fmt::print("node {}: {}\n", amount++, node.mAnimNodeIndex);
     }
 }

@@ -7,13 +7,13 @@
 
 class Node {
 public:
-    int meshIndex = -1;
-    int parentIndex = -1;
-    int boneIndex = -1;
-    int animNodeIndex = -1;
-    glm::mat4 transform{1.0f};
-    std::vector<uint32_t> childrenIndices;
-    std::string name;
+    int mMeshIndex = -1;
+    int mParentIndex = -1;
+    int mBoneIndex = -1;
+    int mAnimNodeIndex = -1;
+    glm::mat4 mTransform{1.0f};
+    std::vector<uint32_t> mChildrenIndices;
+    std::string mName;
 };
 
 // https://github.khronos.org/glTF-Tutorials/gltfTutorial/gltfTutorial_004_ScenesNodes.html

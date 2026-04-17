@@ -29,22 +29,22 @@ public:
     void InitSkybox();
 
 private:
-    const char *title = "3nk engine demo - skinning";
-    int screenWidth = 1920;
-    int screenHeight = 1080;
-    SDL_Window *window = nullptr;
-    SDL_GLContext context = nullptr;
-    bool running = true;
-    bool loadedModel = false;
-    uint32_t targetFrameTime = 16; // 16ms ~ 60fps
-    SDL_Event event{};
-    float lastFrame = 0;
-    float dt = 0;
-    Shader skinnedModelShader{};
-    Skybox skybox{};
-    Shader skyboxShader{};
-    Camera camera{};
-    int selectedGameObjectId = -1;
+    const char *m_Title = "3nk engine demo - skinning";
+    int m_ScreenWidth = 1920;
+    int m_ScreenHeight = 1080;
+    SDL_Window *m_Window = nullptr;
+    SDL_GLContext m_Context = nullptr;
+    bool m_Running = true;
+    // bool loadedModel = false;
+    uint32_t m_TargetFrameRate = 16; // 16ms ~ 60fps
+    SDL_Event m_Event{};
+    float m_LastFrame = 0;
+    float m_DeltaTime = 0;
+    Shader m_SkinningShader{};
+    Skybox m_Skybox{};
+    Shader m_SkyboxShader{};
+    Camera m_Camera{};
+    int m_SelectedGameObjectId = -1;
 };
 
 int main(int argc, char **argv) {
@@ -57,15 +57,18 @@ int main(int argc, char **argv) {
 }
 
 void TestScene::InitSkybox() {
-    const std::array<std::string, 6> filenames = {"right.jpg", "left.jpg", "top.jpg", "bottom.jpg", "front.jpg", "back.jpg"};
+    const std::array<std::string, 6> filenames = {
+        "right.jpg", "left.jpg", "top.jpg",
+        "bottom.jpg", "front.jpg", "back.jpg"
+    };
     std::array<std::string, 6> filenamesFull;
     for (size_t i = 0; i < 6; ++i) {
         filenamesFull[i] = std::string{ASSETS_DIR} + "/textures/skybox/" + filenames[i];
     }
-    skybox.Load(filenamesFull);
-    skyboxShader.use();
-    skyboxShader.setInt("skybox", 0);
-    skybox.InitGL();
+    m_Skybox.Load(filenamesFull);
+    m_SkyboxShader.Use();
+    m_SkyboxShader.SetInt("skybox", 0);
+    m_Skybox.InitGL();
 }
 
 void TestScene::Init() {
@@ -77,10 +80,10 @@ void TestScene::Init() {
     unsigned long int flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE;
     // flags |= SDL_WINDOW_FULLSCREEN;
     // flags |= SDL_WINDOW_BORDERLESS;
-    window = SDL_CreateWindow(
-        title,
-        screenWidth,
-        screenHeight,
+    m_Window = SDL_CreateWindow(
+        m_Title,
+        m_ScreenWidth,
+        m_ScreenHeight,
         flags);
 
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
@@ -89,14 +92,14 @@ void TestScene::Init() {
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
-    if (!window) {
+    if (!m_Window) {
         fmt::print("Failed to create window: {}\n", SDL_GetError());
         SDL_Quit();
         exit(2);
     }
 
-    context = SDL_GL_CreateContext(window);
-    if (context == NULL) {
+    m_Context = SDL_GL_CreateContext(m_Window);
+    if (m_Context == NULL) {
         fmt::print("Failed to create opengl context: {}\n", SDL_GetError());
         SDL_Quit();
         exit(3);
@@ -127,7 +130,7 @@ void TestScene::Init() {
     // Set initial font scale. (in docking branch: using io.ConfigDpiScaleFonts=true automatically overrides this for every window depending on the current monitor)
 
     // Setup Platform/Renderer backends
-    ImGui_ImplSDL3_InitForOpenGL(window, context);
+    ImGui_ImplSDL3_InitForOpenGL(m_Window, m_Context);
     ImGui_ImplOpenGL3_Init("#version 330");
 
     // SDL_SetWindowRelativeMouseMode(window, true);
@@ -136,11 +139,11 @@ void TestScene::Init() {
 
     std::string vertexShaderPath = ASSETS_DIR"shaders/SkinnedObject.vert";
     std::string fragmentShaderPath = ASSETS_DIR"shaders/SkinnedObjectVisualizeBones.frag";
-    skinnedModelShader.createShaderProgram(vertexShaderPath.c_str(), fragmentShaderPath.c_str());
+    m_SkinningShader.CreateShaderProgram(vertexShaderPath.c_str(), fragmentShaderPath.c_str());
 
     vertexShaderPath = ASSETS_DIR"shaders/Skybox.vert";
     fragmentShaderPath = ASSETS_DIR"shaders/Skybox.frag";
-    skyboxShader.createShaderProgram(vertexShaderPath.c_str(), fragmentShaderPath.c_str());
+    m_SkyboxShader.CreateShaderProgram(vertexShaderPath.c_str(), fragmentShaderPath.c_str());
 
     // const char* path = ASSETS_DIR"models/simple-skin/scene.gltf";
     // const char* path = ASSETS_DIR"models/rigged-simple/scene.gltf";
@@ -155,7 +158,7 @@ void TestScene::Init() {
     auto &model = render.mModel;
     AssimpImport(model, path);
     model.InitOpenGLBuffers();
-    selectedGameObjectId = 0;
+    m_SelectedGameObjectId = 0;
 }
 
 void TestScene::RenderUI() {
@@ -168,8 +171,8 @@ void TestScene::RenderUI() {
     bool toolActive = true;
     ImGui::Begin("Inspector", &toolActive, ImGuiWindowFlags_MenuBar);
 
-    if (selectedGameObjectId != -1) {
-        Entity e = EntityManager::Instance().GetEntities()[selectedGameObjectId];
+    if (m_SelectedGameObjectId != -1) {
+        Entity e = EntityManager::Instance().GetEntities()[m_SelectedGameObjectId];
         e.OnInspector();
     }
 
@@ -185,12 +188,12 @@ void TestScene::Render() {
     float b = 0.5f;
     glClearColor(r, g, b, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    float aspect = this->screenWidth / this->screenHeight;
+    float aspect = this->m_ScreenWidth / this->m_ScreenHeight;
     auto projection = glm::perspective(glm::radians(45.0f), aspect, 0.1f, 100.0f);
-    auto view = camera.GetMatrix();
-    skinnedModelShader.use();
-    skinnedModelShader.setMat4("view", view);
-    skinnedModelShader.setMat4("projection", projection);
+    auto view = m_Camera.GetMatrix();
+    m_SkinningShader.Use();
+    m_SkinningShader.SetMat4("view", view);
+    m_SkinningShader.SetMat4("projection", projection);
 
 
 
@@ -209,47 +212,47 @@ void TestScene::Render() {
         if (cRender.mShowTriangles) {
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         }
-        skinnedModelShader.setBool("boneRender", cRender.mShowBones);
+        m_SkinningShader.SetBool("boneRender", cRender.mShowBones);
         if (cRender.mShowBones) {
-            skinnedModelShader.setInt("selectedBoneId", cRender.mSelectedBoneId);
+            m_SkinningShader.SetInt("selectedBoneId", cRender.mSelectedBoneId);
         }
         auto matrix = object.Get<CTransform>().Matrix();
-        cRender.mModel.AssimpRender(skinnedModelShader, matrix, this->dt);
+        cRender.mModel.AssimpRender(m_SkinningShader, matrix, this->m_DeltaTime);
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     }
 
     auto viewNoTranslation = glm::mat4(glm::mat3(view));
-    skybox.Render(skyboxShader, viewNoTranslation, projection);
+    m_Skybox.Render(m_SkyboxShader, viewNoTranslation, projection);
 
 
     glGetError();
     glBindVertexArray(0);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-    SDL_GL_SwapWindow(window);
+    SDL_GL_SwapWindow(m_Window);
 }
 
 void TestScene::Run() {
-    while (this->running) {
+    while (this->m_Running) {
         this->Update();
     }
-    SDL_DestroyWindow(this->window);
-    SDL_GL_DestroyContext(this->context);
+    SDL_DestroyWindow(this->m_Window);
+    SDL_GL_DestroyContext(this->m_Context);
 }
 
 void TestScene::Update() {
     uint64_t frameStart = SDL_GetTicks();
     float currentFrame = (float) frameStart / 1000.0f;
-    dt = currentFrame - lastFrame;
-    lastFrame = currentFrame;
+    m_DeltaTime = currentFrame - m_LastFrame;
+    m_LastFrame = currentFrame;
 
     this->ProcessEvents();
-    this->camera.Move(dt);
+    this->m_Camera.Move(m_DeltaTime);
     this->Render();
 
     uint64_t frameEnd = SDL_GetTicks();
     uint32_t frameDuration = frameEnd - frameStart;
-    if (frameDuration < targetFrameTime) {
-        SDL_Delay(targetFrameTime - frameDuration);
+    if (frameDuration < m_TargetFrameRate) {
+        SDL_Delay(m_TargetFrameRate - frameDuration);
     }
 }
 
@@ -258,14 +261,14 @@ TestScene::~TestScene() {
 }
 
 void TestScene::ProcessEvents() {
-    while (SDL_PollEvent(&event)) {
-        ImGui_ImplSDL3_ProcessEvent(&event);
-        if (event.type == SDL_EVENT_QUIT) {
-            running = false;
+    while (SDL_PollEvent(&m_Event)) {
+        ImGui_ImplSDL3_ProcessEvent(&m_Event);
+        if (m_Event.type == SDL_EVENT_QUIT) {
+            m_Running = false;
         }
-        if (event.type == SDL_EVENT_KEY_DOWN) {
-            if (event.key.scancode == SDL_SCANCODE_ESCAPE) {
-                running = false;
+        if (m_Event.type == SDL_EVENT_KEY_DOWN) {
+            if (m_Event.key.scancode == SDL_SCANCODE_ESCAPE) {
+                m_Running = false;
             }
         }
     }

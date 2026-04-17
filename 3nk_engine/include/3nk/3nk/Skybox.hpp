@@ -92,9 +92,9 @@ public:
 
     void Render(const Shader &shader, const glm::mat4 &view, const glm::mat4 &projection) const {
         // Render skybox
-        shader.use();
-        shader.setMat4("view", view);
-        shader.setMat4("projection", projection);
+        shader.Use();
+        shader.SetMat4("view", view);
+        shader.SetMat4("projection", projection);
         // skybox cube
         glDepthFunc(GL_LEQUAL);  // change depth function so depth test passes when values are equal to depth buffer's content
         // glCullFace(GL_BACK);

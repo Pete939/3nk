@@ -16,8 +16,8 @@ public:
 };
 
 struct BoneInfo {
-    glm::mat4 mOffsetMatrix;
-    glm::mat4 mFinalTransformation;
+    glm::mat4 offsetMatrix;
+    // glm::mat4 mFinalTransformation;
 };
 
 struct PositionKey {

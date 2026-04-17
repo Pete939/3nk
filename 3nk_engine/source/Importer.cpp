@@ -62,7 +62,7 @@ void Importer::LoadJSON(const char *filename, Model &model) {
 
     std::string directory(filename);
     size_t dir = directory.rfind('/');
-    model.directory = directory.substr(0, dir + 1);
+    model.mDirectory = directory.substr(0, dir + 1);
 
     // Load to structures
     std::unordered_map<std::string, size_t> counts;
@@ -84,17 +84,17 @@ void Importer::LoadJSON(const char *filename, Model &model) {
     ImportCtx ctx{};
 
     // std::vector<gltf::Node> nodes{counts["node"]};
-    model.nodes.resize(counts["node"]);
-    for (size_t i = 0; i < model.nodes.size(); ++i) {
+    model.mNodes.resize(counts["node"]);
+    for (size_t i = 0; i < model.mNodes.size(); ++i) {
         auto &jnode = input["nodes"][i];
-        auto &node = model.nodes[i];
+        auto &node = model.mNodes[i];
 
         if (jnode.contains("children")) {
-            node.childrenIndices.resize(jnode["children"].size());
-            for (size_t j = 0; j < node.childrenIndices.size(); ++j) {
+            node.mChildrenIndices.resize(jnode["children"].size());
+            for (size_t j = 0; j < node.mChildrenIndices.size(); ++j) {
                 uint32_t childIndex =  jnode["children"][j];
-                node.childrenIndices[j] = childIndex;
-                model.nodes[childIndex].parentIndex = i;
+                node.mChildrenIndices[j] = childIndex;
+                model.mNodes[childIndex].mParentIndex = i;
             }
         }
 
@@ -108,11 +108,11 @@ void Importer::LoadJSON(const char *filename, Model &model) {
         }
 
         if (jnode.contains("mesh")) {
-            node.meshIndex = jnode["mesh"];
+            node.mMeshIndex = jnode["mesh"];
         }
         if (jnode.contains("translation")) {
             auto t = jnode["translation"];
-            node.transform = glm::translate(node.transform, glm::vec3(t[0], t[1], t[2]));
+            node.mTransform = glm::translate(node.mTransform, glm::vec3(t[0], t[1], t[2]));
         }
         // TODO: I think that rotation works correctly but I'm not sure
         if (jnode.contains("rotation")) {
@@ -124,15 +124,15 @@ void Importer::LoadJSON(const char *filename, Model &model) {
                 angle = 0.0f;
                 axis.z = 1.0f;
             }
-            node.transform = glm::rotate(node.transform, glm::radians(angle), axis);
+            node.mTransform = glm::rotate(node.mTransform, glm::radians(angle), axis);
         }
         if (jnode.contains("scale")) {
             auto s = jnode["scale"];
-            node.transform = glm::scale(node.transform, glm::vec3(s[0], s[1], s[2]));
+            node.mTransform = glm::scale(node.mTransform, glm::vec3(s[0], s[1], s[2]));
         }
     }
 
-    model.meshes.resize(counts["mesh"]);
+    model.mMeshes.resize(counts["mesh"]);
     ctx.meshes.resize(counts["mesh"]);
     for (size_t i = 0; i < ctx.meshes.size(); ++i) {
         auto &jsonMeshPrimitive = input["meshes"][i]["primitives"];
@@ -231,16 +231,16 @@ void Importer::LoadJSON(const char *filename, Model &model) {
         }
     }
 
-    model.textures.resize(ctx.images.size());
-    for (size_t i = 0; i < model.textures.size(); ++i) {
-        auto &texture = model.textures[i];
-        texture.path = ctx.images[i].uri.value();
+    model.mTextures.resize(ctx.images.size());
+    for (size_t i = 0; i < model.mTextures.size(); ++i) {
+        auto &texture = model.mTextures[i];
+        texture.mPath = ctx.images[i].uri.value();
         if (ctx.textures[i].sampler >= 0) {
             auto sampler = ctx.samplers[ctx.textures[i].sampler];
-            texture.sampler.minFilter = sampler.minFilter;
-            texture.sampler.magFilter = sampler.magFilter;
-            texture.sampler.wrapS = sampler.wrapS;
-            texture.sampler.wrapT = sampler.wrapT;
+            texture.mSampler.minFilter = sampler.minFilter;
+            texture.mSampler.magFilter = sampler.magFilter;
+            texture.mSampler.wrapS = sampler.wrapS;
+            texture.mSampler.wrapT = sampler.wrapT;
         }
     }
 
@@ -309,7 +309,7 @@ void Importer::LoadJSON(const char *filename, Model &model) {
         std::string uri = jsonBuffer["uri"];
         int comma = uri.find(',');
         if (comma < 0) {
-            std::string path = model.directory + uri;
+            std::string path = model.mDirectory + uri;
             // fmt::print("{}\n", path);
             std::ifstream binFile(path, std::ios::binary);
             buffer.byteLength = jsonBuffer["byteLength"];
@@ -334,24 +334,24 @@ void Importer::LoadJSON(const char *filename, Model &model) {
         for (auto &primitive: mesh.primitives) {
             if (primitive.indices.has_value()) {
                 int idx = primitive.indices.value();
-                LoadModelAttribute<uint16_t>(ctx, model.meshes[i].indices, idx, 1);
+                LoadModelAttribute<uint16_t>(ctx, model.mMeshes[i].mIndices, idx, 1);
             }
             auto &attr = primitive.attributes;
             if (attr.position.has_value()) {
                 int idx = attr.position.value();
-                LoadModelAttribute<float>(ctx, model.meshes[i].vertices, idx, 3);
+                LoadModelAttribute<float>(ctx, model.mMeshes[i].mVertices, idx, 3);
             }
             if (attr.normal.has_value()) {
                 int idx = attr.normal.value();
-                LoadModelAttribute<float>(ctx, model.meshes[i].normals, idx, 3);
+                LoadModelAttribute<float>(ctx, model.mMeshes[i].mNormals, idx, 3);
             }
             if (attr.texCoord.has_value()) {
                 int idx = attr.texCoord.value();
-                LoadModelAttribute<float>(ctx, model.meshes[i].texCoords, idx, 2);
+                LoadModelAttribute<float>(ctx, model.mMeshes[i].mTexCoords, idx, 2);
             }
             if (attr.color.has_value()) {
                 int idx = attr.color.value();
-                LoadModelAttribute<float>(ctx, model.meshes[i].colors, idx, 2);
+                LoadModelAttribute<float>(ctx, model.mMeshes[i].mColors, idx, 2);
             }
         }
         for (int accIdx : accessors_) {
@@ -383,7 +383,7 @@ void Importer::LoadJSON(const char *filename, Model &model) {
                 for (size_t j = 0; j < indices_.size(); ++j) {
                     size_t index = indices_[j];
                     for (size_t k = 0; k < 3; ++k) {
-                        model.meshes[i].vertices[index * 3 + k] = values[j * 3 + k];
+                        model.mMeshes[i].mVertices[index * 3 + k] = values[j * 3 + k];
                     }
                 }
             }
@@ -396,7 +396,7 @@ void Importer::LoadJSON(const char *filename, Model &model) {
             if ((baseColor.has_value())) {
                 int texture = baseColor.value().index;
                 int source = ctx.textures[texture].source;
-                model.meshes[i].materialIndex = source;
+                model.mMeshes[i].mMaterialIndex = source;
             }
         }
     }

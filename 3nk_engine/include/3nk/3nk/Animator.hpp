@@ -53,10 +53,10 @@ public:
     void CalculateBones(size_t nodeId, glm::mat4 transform, float dt) {
         assert(mModelNodes != nullptr);
         auto &node = (*mModelNodes)[nodeId];
-        glm::mat4 nodeT = node.transform;
+        glm::mat4 nodeT = node.mTransform;
         // Get bone
-        if (node.animNodeIndex != -1) {
-            auto &bone = mAnimations[mCurrentAnimationIndex].mNodes[node.animNodeIndex];
+        if (node.mAnimNodeIndex != -1) {
+            auto &bone = mAnimations[mCurrentAnimationIndex].mNodes[node.mAnimNodeIndex];
             auto t = glm::vec3(0.0f);
             auto s = glm::vec3(1.0f);
             auto r = glm::identity<glm::quat>();
@@ -78,13 +78,13 @@ public:
 
         glm::mat4 globalT = transform * nodeT;
 
-        if (node.boneIndex != -1) {
-            auto bi = mBoneInfos[node.boneIndex];
-            mBoneMatrices[node.boneIndex] = globalT * bi.mOffsetMatrix;
+        if (node.mBoneIndex != -1) {
+            auto bi = mBoneInfos[node.mBoneIndex];
+            mBoneMatrices[node.mBoneIndex] = globalT * bi.offsetMatrix;
         }
 
-        for (size_t i = 0; i < node.childrenIndices.size(); ++i) {
-            CalculateBones(node.childrenIndices[i], globalT, dt);
+        for (size_t i = 0; i < node.mChildrenIndices.size(); ++i) {
+            CalculateBones(node.mChildrenIndices[i], globalT, dt);
         }
     }
 

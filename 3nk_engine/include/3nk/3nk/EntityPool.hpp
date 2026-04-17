@@ -6,14 +6,14 @@
 class Entity;
 
 class EntityPool {
-    uint32_t mNumEntities;
+    uint32_t m_NumEntities;
     std::tuple<
         std::vector<CTransform>,
         std::vector<CRender>
         // std::vector<CBoneRenderInfo>
-    > mPool;
-    std::vector<bool> mActive;
-    std::vector<std::string> mTags;
+    > m_Pool;
+    std::vector<bool> m_Active;
+    std::vector<std::string> m_Tags;
 
     EntityPool(uint32_t maxEntities);
 
@@ -37,12 +37,12 @@ public:
 
 template<typename T>
 T &EntityPool::GetComponent(uint32_t entityId) {
-    return std::get<std::vector<T>>(mPool)[entityId];
+    return std::get<std::vector<T>>(m_Pool)[entityId];
 }
 
 template<typename T>
 bool EntityPool::HasComponent(uint32_t entityId) {
-    return std::get<std::vector<T>>(mPool)[entityId].mActive;
+    return std::get<std::vector<T>>(m_Pool)[entityId].mActive;
 }
 
 template<typename T>

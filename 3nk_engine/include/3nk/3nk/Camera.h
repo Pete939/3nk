@@ -12,15 +12,17 @@ public:
 
     [[nodiscard]] glm::mat4 GetMatrix() const;
 
-    glm::vec3 position;
-    glm::vec3 direction;
-    glm::vec3 right;
-    glm::vec3 up;
 
-    float speed;
-    float yaw;
-    float pitch;
 private:
-    float lastX;
-    float lastY;
+    glm::vec3 m_Position;
+    glm::vec3 m_Direction;
+    glm::vec3 m_Right;
+    glm::vec3 m_Up;
+
+    float m_Speed;
+    float m_Yaw;
+    float m_Pitch;
+
+    float m_LastX;
+    float m_LastY;
 };

@@ -3,17 +3,17 @@
 #include <string>
 
 class Texture {
+    uint32_t m_Id;
 public:
-    uint32_t id;
-    std::string path;
+    std::string mPath;
     struct {
         int magFilter = GL_LINEAR;
         int minFilter = GL_LINEAR;
         int wrapS = GL_REPEAT;
         int wrapT = GL_REPEAT;
-    } sampler;
+    } mSampler;
     Texture(std::string path);
     Texture();
-    void load(std::string path);
-    void use(int n) const;
+    void Load(std::string path);
+    void Use(int n) const;
 };

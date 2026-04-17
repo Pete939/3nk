@@ -5,12 +5,12 @@
 #include "3nk/Entity.hpp"
 
 EntityPool::EntityPool(uint32_t maxEntities) {
-    std::get<std::vector<CTransform> >(mPool).resize(maxEntities);
-    std::get<std::vector<CRender> >(mPool).resize(maxEntities);
+    std::get<std::vector<CTransform> >(m_Pool).resize(maxEntities);
+    std::get<std::vector<CRender> >(m_Pool).resize(maxEntities);
     // std::get<std::vector<CBoneRenderInfo> >(mPool).resize(maxEntities);
-    mActive.resize(maxEntities);
-    mTags.resize(maxEntities);
-    mNumEntities = 0;
+    m_Active.resize(maxEntities);
+    m_Tags.resize(maxEntities);
+    m_NumEntities = 0;
 }
 
 
@@ -20,8 +20,8 @@ EntityPool &EntityPool::Instance() {
 }
 
 Entity EntityPool::AddEntity(const std::string &tag) {
-    mActive[mNumEntities] = true;
-    mTags[mNumEntities] = tag;
-    Entity e{mNumEntities++};
+    m_Active[m_NumEntities] = true;
+    m_Tags[m_NumEntities] = tag;
+    Entity e{m_NumEntities++};
     return e;
 }

@@ -13,18 +13,18 @@ struct VertexToBone {
 
 
 class Mesh {
+    uint32_t m_Vao;
 public:
     Mesh();
     void InitOpenGLBuffers();
     void Render(Shader &shader);
 
-    uint32_t vao;
-    std::vector<float> vertices;
-    std::vector<float> normals;
-    std::vector<float> texCoords;
-    std::vector<uint16_t> indices;
-    std::vector<float> colors;
-    std::vector<VertexToBone> vertexToBones;
-    int materialIndex = -1;
+    std::vector<float> mVertices;
+    std::vector<float> mNormals;
+    std::vector<float> mTexCoords;
+    std::vector<uint16_t> mIndices;
+    std::vector<float> mColors;
+    std::vector<VertexToBone> mVertexToBones;
+    int mMaterialIndex = -1;
     int mNumIndices = 0;
 };

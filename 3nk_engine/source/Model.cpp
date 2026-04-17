@@ -12,19 +12,19 @@ Model::Model() {
 }
 
 void Model::AssimpNodeRender(size_t idx, glm::mat4 transform, Shader &shader,float dt) {
-    auto &node = nodes[idx];
-    if (!node.childrenIndices.empty()) {
-        for (uint32_t index : node.childrenIndices) {
-            transform = transform * nodes[index].transform;
+    auto &node = mNodes[idx];
+    if (!node.mChildrenIndices.empty()) {
+        for (uint32_t index : node.mChildrenIndices) {
+            transform = transform * mNodes[index].mTransform;
             AssimpNodeRender(index, transform, shader, dt);
         }
     }
     // shader.setMat4("model", transform);
-    if (node.meshIndex >= 0) {
-        auto &mesh = meshes[node.meshIndex];
-        if (mesh.materialIndex >= 0) {
+    if (node.mMeshIndex >= 0) {
+        auto &mesh = mMeshes[node.mMeshIndex];
+        if (mesh.mMaterialIndex >= 0) {
             // TODO: Keep n=0?
-            textures[mesh.materialIndex].use(0);
+            mTextures[mesh.mMaterialIndex].Use(0);
         }
         else {
             glBindTexture(GL_TEXTURE_2D, GetWhiteTexture());
@@ -40,15 +40,15 @@ void Model::AssimpRender(Shader &shader, const glm::mat4 &transform, float dt) {
     mAnimator->Update(dt);
 
     std::string uniBoneArrName("boneMatrices");
-    shader.setMat4s(uniBoneArrName, 100, mAnimator->mBoneMatrices.data());
+    shader.SetMat4s(uniBoneArrName, 100, mAnimator->mBoneMatrices.data());
 
-    shader.setMat4("model", transform);
+    shader.SetMat4("model", transform);
 
-    meshes[0].Render(shader);
+    mMeshes[0].Render(shader);
 }
 
 void Model::InitOpenGLBuffers() {
-    for (auto & mesh : meshes) {
+    for (auto & mesh : mMeshes) {
         mesh.InitOpenGLBuffers();
     }
 }
