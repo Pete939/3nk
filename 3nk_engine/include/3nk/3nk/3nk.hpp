@@ -8,3 +8,4 @@
 #include <3nk/Scene.hpp>
 #include <3nk/Entity.hpp>
 #include <3nk/EntityManager.hpp>
+#include <3nk/Skybox.hpp>

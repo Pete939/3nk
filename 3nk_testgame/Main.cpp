@@ -11,6 +11,7 @@
 
 class TestScene : public IScene {
 public:
+
     void Init() override;
 
     void Run() override;
@@ -25,6 +26,8 @@ public:
 
     void RenderUI();
 
+    void InitSkybox();
+
 private:
     const char *title = "3nk engine demo - skinning";
     int screenWidth = 1920;
@@ -37,8 +40,10 @@ private:
     SDL_Event event{};
     float lastFrame = 0;
     float dt = 0;
-    Shader skinnedModelShader;
-    Camera camera;
+    Shader skinnedModelShader{};
+    Skybox skybox{};
+    Shader skyboxShader{};
+    Camera camera{};
     int selectedGameObjectId = -1;
 };
 
@@ -49,6 +54,18 @@ int main(int argc, char **argv) {
         scene.Run();
     }
     return 0;
+}
+
+void TestScene::InitSkybox() {
+    const std::array<std::string, 6> filenames = {"right.jpg", "left.jpg", "top.jpg", "bottom.jpg", "front.jpg", "back.jpg"};
+    std::array<std::string, 6> filenamesFull;
+    for (size_t i = 0; i < 6; ++i) {
+        filenamesFull[i] = std::string{ASSETS_DIR} + "/textures/skybox/" + filenames[i];
+    }
+    skybox.Load(filenamesFull);
+    skyboxShader.use();
+    skyboxShader.setInt("skybox", 0);
+    skybox.InitGL();
 }
 
 void TestScene::Init() {
@@ -121,10 +138,16 @@ void TestScene::Init() {
     std::string fragmentShaderPath = ASSETS_DIR"shaders/SkinnedObjectVisualizeBones.frag";
     skinnedModelShader.createShaderProgram(vertexShaderPath.c_str(), fragmentShaderPath.c_str());
 
+    vertexShaderPath = ASSETS_DIR"shaders/Skybox.vert";
+    fragmentShaderPath = ASSETS_DIR"shaders/Skybox.frag";
+    skyboxShader.createShaderProgram(vertexShaderPath.c_str(), fragmentShaderPath.c_str());
+
     // const char* path = ASSETS_DIR"models/simple-skin/scene.gltf";
     // const char* path = ASSETS_DIR"models/rigged-simple/scene.gltf";
     // const char* path = ASSETS_DIR"models/cesium-man/scene.gltf";
     // const char* path = ASSETS_DIR"models/rigged-figure/scene.gltf";
+
+    InitSkybox();
 
     auto object = EntityManager::Instance().Add("fox");
     auto &render = object.Add<CRender>();
@@ -169,6 +192,8 @@ void TestScene::Render() {
     skinnedModelShader.setMat4("view", view);
     skinnedModelShader.setMat4("projection", projection);
 
+
+
     auto entities = EntityManager::Instance().GetEntities();
     uint32_t numEntities = EntityManager::Instance().GetNumEntities();
     for (size_t i = 0; i < numEntities; ++i) {
@@ -181,7 +206,6 @@ void TestScene::Render() {
         if (cRender.mVisible == false) {
             continue;
         }
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         if (cRender.mShowTriangles) {
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         }
@@ -191,19 +215,18 @@ void TestScene::Render() {
         }
         auto matrix = object.Get<CTransform>().Matrix();
         cRender.mModel.AssimpRender(skinnedModelShader, matrix, this->dt);
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     }
+
+    auto viewNoTranslation = glm::mat4(glm::mat3(view));
+    skybox.Render(skyboxShader, viewNoTranslation, projection);
+
+
+    glGetError();
     glBindVertexArray(0);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     SDL_GL_SwapWindow(window);
 }
-
-/*
-
-    RenderManager::RenderScene(objects) {
-        if
-    }
-
-*/
 
 void TestScene::Run() {
     while (this->running) {
