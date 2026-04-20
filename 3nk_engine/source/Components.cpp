@@ -5,7 +5,8 @@
 Component::Component() { mActive = true; }
 
 glm::mat4 CTransform::Matrix() const {
-    const glm::mat4 matrix = glm::translate(glm::mat4{1.0f}, mPosition);
+    glm::mat4 matrix = glm::translate(glm::mat4{1.0f}, mPosition);
+    matrix = matrix * glm::mat4_cast(mRotation);
     return glm::scale(matrix, mScale);
 }
 
@@ -28,6 +29,9 @@ void CRender::Update(float dt) {}
 void CRender::OnInspector() {
     ImGui::Checkbox("Visible", &mVisible);
     ImGui::Checkbox("Show Triangles", &mShowTriangles);
+    if (mModel.mAnimator ==  nullptr) {
+        return;
+    }
     if (mModel.mAnimator->mNumBones <= 0) {
         return;
     }

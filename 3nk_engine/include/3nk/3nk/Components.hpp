@@ -17,7 +17,7 @@ public:
 class CTransform : public Component {
 public:
     glm::vec3 mPosition{0.0f};
-    // glm::quat rotation;
+    glm::quat mRotation{};
     glm::vec3 mScale{1.0f};
     glm::mat4 Matrix() const;
     void Start() override;
@@ -35,6 +35,7 @@ public:
     void Update(float dt) override;
     void OnInspector() override;
     Model mModel{};
+    Shader *mShader = nullptr;
     bool mVisible = true;
     bool mShowTriangles = false;
     bool mShowBones = false;
