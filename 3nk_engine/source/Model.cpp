@@ -19,7 +19,7 @@ void Model::AssimpNodeRender(size_t idx, glm::mat4 transform, Shader &shader,flo
             AssimpNodeRender(index, transform, shader, dt);
         }
     }
-    // shader.setMat4("model", transform);
+    shader.SetMat4("model", node.mTransform * transform);
     if (node.mMeshIndex >= 0) {
         auto &mesh = mMeshes[node.mMeshIndex];
         if (mesh.mMaterialIndex >= 0) {
@@ -36,15 +36,14 @@ void Model::AssimpNodeRender(size_t idx, glm::mat4 transform, Shader &shader,flo
 
 
 void Model::AssimpRender(Shader &shader, const glm::mat4 &transform, float dt) {
-    assert(mAnimator != nullptr);
-    mAnimator->Update(dt);
-
-    std::string uniBoneArrName("boneMatrices");
-    shader.SetMat4s(uniBoneArrName, 100, mAnimator->mBoneMatrices.data());
-
-    shader.SetMat4("model", transform);
-
-    mMeshes[0].Render(shader);
+    if (mAnimator != nullptr) {
+        mAnimator->Update(dt);
+        std::string uniBoneArrName("boneMatrices");
+        shader.SetMat4s(uniBoneArrName, 100, mAnimator->mBoneMatrices.data());
+        AssimpNodeRender(0, transform, shader, dt);
+        return;
+    }
+    AssimpNodeRender(0, transform, shader, dt);
 }
 
 void Model::InitOpenGLBuffers() {
