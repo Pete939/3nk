@@ -26,7 +26,17 @@ public:
 
     void RenderUI();
 
+    void InitWindow();
+
+    void InitShaders();
+
+    void InitObjects();
+
+    void InitPlayer();
+
     void InitSkybox();
+
+    void SPlayerMovement(float dt);
 
 private:
     const char *m_Title = "3nk engine demo - skinning";
@@ -40,6 +50,7 @@ private:
     SDL_Event m_Event{};
     float m_LastFrame = 0;
     float m_DeltaTime = 0;
+    Shader m_StaticMeshShader{};
     Shader m_SkinningShader{};
     Skybox m_Skybox{};
     Shader m_SkyboxShader{};
@@ -71,8 +82,14 @@ void TestScene::InitSkybox() {
     m_Skybox.InitGL();
 }
 
-void TestScene::Init() {
-    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK)) {
+void TestScene::SPlayerMovement(float dt) {
+    // 3rd person camera here?
+    m_Camera.Move(dt);
+}
+
+
+void TestScene::InitWindow() {
+        if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK)) {
         fmt::print("Failed to initialize SDL: {}\n", SDL_GetError());
         exit(1);
     }
@@ -136,29 +153,58 @@ void TestScene::Init() {
     // SDL_SetWindowRelativeMouseMode(window, true);
 
     glEnable(GL_DEPTH_TEST);
+}
 
+void TestScene::InitShaders() {
     std::string vertexShaderPath = ASSETS_DIR"shaders/SkinnedObject.vert";
     std::string fragmentShaderPath = ASSETS_DIR"shaders/SkinnedObjectVisualizeBones.frag";
     m_SkinningShader.CreateShaderProgram(vertexShaderPath.c_str(), fragmentShaderPath.c_str());
 
+    vertexShaderPath = ASSETS_DIR"shaders/triangle.vert";
+    fragmentShaderPath = ASSETS_DIR"shaders/triangle.frag";
+    m_StaticMeshShader.CreateShaderProgram(vertexShaderPath.c_str(), fragmentShaderPath.c_str());
+
     vertexShaderPath = ASSETS_DIR"shaders/Skybox.vert";
     fragmentShaderPath = ASSETS_DIR"shaders/Skybox.frag";
     m_SkyboxShader.CreateShaderProgram(vertexShaderPath.c_str(), fragmentShaderPath.c_str());
+}
 
-    // const char* path = ASSETS_DIR"models/simple-skin/scene.gltf";
-    // const char* path = ASSETS_DIR"models/rigged-simple/scene.gltf";
-    // const char* path = ASSETS_DIR"models/cesium-man/scene.gltf";
-    // const char* path = ASSETS_DIR"models/rigged-figure/scene.gltf";
+void TestScene::InitObjects() {
+    {
+        auto floor = EntityManager::Instance().Add("floor");
+        auto &render = floor.Add<CRender>();
+        const char *path = ASSETS_DIR"models/prop-floor/floor.glb";
+        auto &model = render.mModel;
+        AssimpImport(model, path);
+        model.InitOpenGLBuffers();
+        render.mShader = &m_StaticMeshShader;
+    }
 
-    InitSkybox();
+    InitPlayer();
 
+    m_SelectedGameObjectId = 1;
+}
+
+void TestScene::InitPlayer() {
     auto object = EntityManager::Instance().Add("fox");
+    auto &transform = object.Add<CTransform>();
+    transform.mScale = glm::vec3(0.01f);
+    transform.mPosition = glm::vec3(0.0f, -1.0f, 0.0f);
+    auto identity = glm::quat{1, 0, 0, 0};
+    transform.mRotation = glm::rotate(identity, glm::radians(180.0f), glm::vec3{0.0f, 1.0f, 0.0f});
     auto &render = object.Add<CRender>();
     const char *path = ASSETS_DIR"models/fox/scene.gltf";
     auto &model = render.mModel;
     AssimpImport(model, path);
     model.InitOpenGLBuffers();
-    m_SelectedGameObjectId = 0;
+    render.mShader = &m_SkinningShader;
+}
+
+void TestScene::Init() {
+    InitWindow();
+    InitShaders();
+    InitObjects();
+    InitSkybox();
 }
 
 void TestScene::RenderUI() {
@@ -191,33 +237,35 @@ void TestScene::Render() {
     float aspect = this->m_ScreenWidth / this->m_ScreenHeight;
     auto projection = glm::perspective(glm::radians(45.0f), aspect, 0.1f, 100.0f);
     auto view = m_Camera.GetMatrix();
-    m_SkinningShader.Use();
-    m_SkinningShader.SetMat4("view", view);
-    m_SkinningShader.SetMat4("projection", projection);
-
-
 
     auto entities = EntityManager::Instance().GetEntities();
     uint32_t numEntities = EntityManager::Instance().GetNumEntities();
     for (size_t i = 0; i < numEntities; ++i) {
         auto object = entities[i];
         assert(object.Has<CRender>());
-        if (!object.Has<CRender>()) {
-            continue;
-        }
         auto &cRender = object.Get<CRender>();
+
         if (cRender.mVisible == false) {
             continue;
         }
+
+        cRender.mShader->Use();
+        cRender.mShader->SetMat4("view", view);
+        cRender.mShader->SetMat4("projection", projection);
+
         if (cRender.mShowTriangles) {
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         }
-        m_SkinningShader.SetBool("boneRender", cRender.mShowBones);
-        if (cRender.mShowBones) {
-            m_SkinningShader.SetInt("selectedBoneId", cRender.mSelectedBoneId);
+
+        if (cRender.mModel.mAnimator != nullptr) {
+            m_SkinningShader.SetBool("boneRender", cRender.mShowBones);
+            if (cRender.mShowBones) {
+                m_SkinningShader.SetInt("selectedBoneId", cRender.mSelectedBoneId);
+            }
         }
+
         auto matrix = object.Get<CTransform>().Matrix();
-        cRender.mModel.AssimpRender(m_SkinningShader, matrix, this->m_DeltaTime);
+        cRender.mModel.AssimpRender(*cRender.mShader, matrix, m_DeltaTime);
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     }
 
@@ -246,7 +294,8 @@ void TestScene::Update() {
     m_LastFrame = currentFrame;
 
     this->ProcessEvents();
-    this->m_Camera.Move(m_DeltaTime);
+    // Move here
+    SPlayerMovement(m_DeltaTime);
     this->Render();
 
     uint64_t frameEnd = SDL_GetTicks();
