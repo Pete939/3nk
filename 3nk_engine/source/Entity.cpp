@@ -9,6 +9,9 @@ void Entity::OnInspector() {
     Get<CTransform>().OnInspector();
     auto &render = Get<CRender>();
     render.OnInspector();
+    if (render.mModel.mAnimator == nullptr) {
+        return;
+    }
     ImGui::Text("Animations");
     assert(render.mModel.mAnimator != nullptr);
     int animationId = render.mModel.mAnimator->mCurrentAnimationIndex;
