@@ -84,23 +84,31 @@ void ProcessMesh(Mesh &pMesh, aiMesh *pAiMesh, const aiScene *scene, Model &mode
     if (pAiMesh->mMaterialIndex >= 0) {
         aiMaterial *mat = scene->mMaterials[pAiMesh->mMaterialIndex];
         aiString str;
+        if (mat->GetTextureCount(aiTextureType_BASE_COLOR) == 0) {
+            fmt::print(stderr, "Current version of model loader requires a model to have a texture.\n");
+            assert(0);
+        }
         mat->GetTexture(aiTextureType_BASE_COLOR, 0, &str);
-        if (mat->GetTextureCount(aiTextureType_BASE_COLOR) != 0) {
+        const aiTexture* t = scene->GetEmbeddedTexture(str.C_Str());
+        if (t == nullptr) {
             std::string path = model.mDirectory + std::string(str.C_Str());
             if (!IsTextureAlreadyLoaded(model, path)) {
                 model.mTextures[0].Load(path);
                 fmt::print("texture path: {}\n", str.C_Str());
             }
         }
-
+        else {
+            fmt::print("TEXTURE IN MEMORY\n");
+            model.mTextures[0].Load(t);
+        }
         pMesh.mMaterialIndex = pAiMesh->mMaterialIndex;
+    }
+
         // constexpr int ASSIMP_MAX_TEXTURE_TYPES = 27;
         // fmt::print("TEXTURE TYPE COUNTS\n");
         // for (size_t i = 0; i <= ASSIMP_MAX_TEXTURE_TYPES; ++i) {
             // fmt::print("type {} count: {}\n", i, mat->GetTextureCount(aiTextureType(i)));
         // }
-    }
-
     if (pAiMesh->HasBones()) {
         std::vector<int> vertexBoneCount; // Temporary vector that stores how many bones have been discovered per vertex
         vertexBoneCount.resize(pAiMesh->mNumVertices, 0);
@@ -165,7 +173,6 @@ void ProcessNode(uint32_t currentNodeIndex, aiNode *pAiNode, Model &model, int *
     modelNode.mTransform = AssimpToGLM::ConvertMatrixToGLMFormat(pAiNode->mTransformation);
 
     // Process node's children
-    int nodeIndex = currentNodeIndex;
     if (pAiNode->mNumChildren > 0) {
         modelNode.mChildrenIndices.resize(pAiNode->mNumChildren);
         for (size_t i = 0; i < pAiNode->mNumChildren; ++i) {
@@ -277,14 +284,16 @@ void AssimpImport(Model &model, const std::string &filename) {
     int index = 0;
     ProcessNode(0, scene->mRootNode, model, &index);
 
-    bool hasAnimations = false;
-    model.mAnimator = new Animator;
-    model.mAnimator->mAnimations.resize(scene->mNumAnimations);
-    assert(model.mAnimator != nullptr);
+
+
+    bool hasBones = false;
 
     int totalBones = 0;
     if (scene->HasAnimations()) {
-        hasAnimations = true;
+        model.mAnimator = new Animator;
+        model.mAnimator->mAnimations.resize(scene->mNumAnimations);
+        assert(model.mAnimator != nullptr);
+        hasBones = true;
         fmt::print("Animations\n");
         ProcessAnimations(model, scene);
         // Count bones
@@ -292,16 +301,12 @@ void AssimpImport(Model &model, const std::string &filename) {
             aiMesh *mesh = scene->mMeshes[i];
             totalBones += mesh->mNumBones;
         }
+        model.mAnimator->mBoneInfos.reserve(totalBones);
+
+        model.mAnimator->mModelNodes = &model.mNodes;
     }
 
-    assert(hasAnimations == true);
-
-
-    model.mAnimator->mBoneInfos.reserve(totalBones);
-    // model.boneInfos.reserve(totalBones);
-
     std::unordered_map<std::string, int> boneMap;
-
     // Mesh process
     fmt::print("Meshes\n");
     for (size_t i = 0; i < scene->mNumMeshes; ++i) {
@@ -311,19 +316,13 @@ void AssimpImport(Model &model, const std::string &filename) {
         ProcessMesh(modelMesh, mesh, scene, model, boneMap);
     }
 
-    // TODO: Link nodes to bones
-    for (auto &node: model.mNodes) {
-        if (!node.mName.empty() and boneMap.contains(node.mName)) {
-            node.mBoneIndex = boneMap[node.mName];
+    if (hasBones) {
+        for (auto &node: model.mNodes) {
+            if (!node.mName.empty() and boneMap.contains(node.mName)) {
+                node.mBoneIndex = boneMap[node.mName];
+            }
         }
     }
-
-    // assert(model.boneInfos.capacity() == 2);
-
-    // model.globalInverseTransform = glm::inverse(model.nodes[0].transform);
-
-    model.mAnimator->mModelNodes = &model.mNodes;
-
 
     int amount = 0;
     for (auto &node : model.mNodes) {

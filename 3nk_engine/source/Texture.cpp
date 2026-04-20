@@ -5,6 +5,58 @@
 #include <glad/glad.h>
 #include "3nk/Texture.h"
 #include <cmath>
+#include <assimp/texture.h>
+
+void Texture::Load(const aiTexture *texture) {
+    int width, height, nrChannels;
+    stbi_set_flip_vertically_on_load(false);
+    uint8_t *data;
+    if (texture->mHeight == 0)
+    {
+        data = stbi_load_from_memory(reinterpret_cast<unsigned char*>(texture->pcData),
+            texture->mWidth, &width, &height, &nrChannels,
+            0);
+    }
+    else
+    {
+        data = stbi_load_from_memory(reinterpret_cast<unsigned char*>(texture->pcData),
+            texture->mWidth * texture->mHeight, &width, &height, &nrChannels,
+            0);
+    }
+
+    if (!data) {
+        std::cerr << fmt::format("Failed to load embedded texture\n");
+        assert(0);
+    }
+
+    uint32_t id;
+    glGenTextures(1, &id);
+    glBindTexture(GL_TEXTURE_2D, id);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, mSampler.wrapS);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, mSampler.wrapT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, mSampler.minFilter);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, mSampler.magFilter);
+
+
+    GLint format, internalFormat;
+    if (nrChannels == 1) {
+        format = GL_RED;
+    }
+    else if (nrChannels == 3) {
+        format = GL_RGB;
+    }
+    else if (nrChannels == 4) {
+        format = GL_RGBA;
+    }
+    internalFormat = format;
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height,
+        0, format, GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    stbi_image_free(data);
+    m_Id = id;
+}
 
 void Texture::Load(std::string path) {
     int width, height, nrChannels;
@@ -12,9 +64,8 @@ void Texture::Load(std::string path) {
     uint8_t *data = stbi_load(path.c_str(), &width,
         &height, &nrChannels, 0);
     if (!data) {
-        assert(0);
         std::cerr << fmt::format("Failed to load texture: {}\n", path);
-        exit(1);
+        assert(0);
     }
 
     this->mPath = path;

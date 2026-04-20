@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <string>
+#include <assimp/texture.h>
 
 class Texture {
     uint32_t m_Id;
@@ -14,6 +15,9 @@ public:
     } mSampler;
     Texture(std::string path);
     Texture();
+
+    void Load(const aiTexture *texture);
+
     void Load(std::string path);
     void Use(int n) const;
 };
